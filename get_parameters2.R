@@ -16,6 +16,8 @@ get_parameters2 <- function(hdrf, t) {
   }
 
   v <- rep(0, length(hdrf))
+  print(hdrf)
+  print(h/2)
   for (i in 1:length(hdrf)){
     if (h>0){
       v[i] <- (hdrf[i] >= (h/2))
@@ -24,7 +26,9 @@ get_parameters2 <- function(hdrf, t) {
     }
   }
   b <- which(diff(v) == -1)[1]
-  v[(b + 1):length(v)] <- 0
+  if (!is.na(b)){
+    v[(b + 1):length(v)] <- 0
+  }
   w <- sum(v)
   
   cnt <- p

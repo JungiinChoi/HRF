@@ -1,4 +1,5 @@
 Fit_Canonical_HRF <- function(tc, TR, Run, T, p) {
+  library(MASS)
   # Fits GLM using canonical hrf (with option of using time and dispersion derivatives)
   
   # INPUTS:
@@ -11,7 +12,7 @@ Fit_Canonical_HRF <- function(tc, TR, Run, T, p) {
   #          p=2 - canonical + temporal derivative
   #          p=3 - canonical + time and dispersion derivative
   
-  # OUTPUTS:
+  # OUTPUTS:()
   # hrf   - estimated hemodynamic response function
   # fit   - estimated time course
   # e     - residual time course
@@ -30,22 +31,22 @@ Fit_Canonical_HRF <- function(tc, TR, Run, T, p) {
   e <- matrix(0, nrow = len, ncol = d)
   
   for (i in 1:d) {
-    h <- convolve(Run[[i]], CanonicalBasisSet(TR)$h)
+    h <- conv(Run[[i]], CanonicalBasisSet(TR)$h)
     X[, (i - 1) * p + 1] <- h[1:len]
     
     if (p > 1) {
-      dh <- convolve(Run[[i]], CanonicalBasisSet(TR)$dh)
+      dh <- conv(Run[[i]], CanonicalBasisSet(TR)$dh)
       X[, (i - 1) * p + 2] <- dh[1:len]
     }
     
     if (p > 2) {
-      dh2 <- convolve(Run[[i]], CanonicalBasisSet(TR)$dh2)
+      dh2 <- conv(Run[[i]], CanonicalBasisSet(TR)$dh2)
       X[, (i - 1) * p + 3] <- dh2[1:len]
     }
   }
   
   X <- cbind(matrix(1, nrow = len, ncol = 1), X)
-  b <- solve(X) %*% tc
+  b <- ginv(X) %*% tc
   e <- tc - X %*% b
   fit <- X %*% b
   
@@ -67,7 +68,7 @@ Fit_Canonical_HRF <- function(tc, TR, Run, T, p) {
   }
   
   for (i in 1:d) {
-    hrf[[i]] <- H %*% b[i, ]
+    hrf[[i]] <- H * b[i, i]
     param[, i] <- get_parameters2(hrf[[i]], 1:length(t))
   }
   
@@ -97,15 +98,15 @@ CanonicalBasisSet <- function(TR) {
   v2 <- xBF$bf[1:len, 2]
   v3 <- xBF$bf[1:len, 3]
   
-  # Compute h, dh, and dh2
   h <- v1
-  dh <- v2 - (t(v2) %*% v1 / norm(v1)^2) %*% v1
-  dh2 <- v3 - (t(v3) %*% v1 / norm(v1)^2) %*% v1 - (t(v3) %*% dh / norm(dh)^2) %*% dh
+  dh <- v2 - (crossprod(v2, v1)[1,1] / sum(v1^2)) * v1
+  dh2 <- v3 - (crossprod(v3, v1)[1,1] / sum(v1^2)) * v1 - (crossprod(v3, dh)[1,1] / sum(dh^2)) * dh
   
-  # Normalize h, dh, and dh2
   h <- h / max(h)
   dh <- dh / max(dh)
   dh2 <- dh2 / max(dh2)
+  
+  list(h = h, dh = dh, dh2 = dh2)
   
   return(list(h = h, dh = dh, dh2 = dh2))
 }

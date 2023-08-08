@@ -24,8 +24,7 @@ Fit_Logit2 <- function(tc, TR, Run, T, mode) {
   len <- length(Run[[1]])
   t <- seq(from = 1, to = T, by = TR)
   
-  
-  V0 <- c(1.1146, 5.4743, 1.0169, 0.4458, 5.7899, 1.0542, 11.2838)  # initial values for logit fit: fitted values in MATLAB
+  V0 <- c(1, 6, 1, 0.5, 10, 1, 15)  # initial values for logit fit: fitted values in MATLAB
   V0 <- matrix(rep(V0, numstim), nrow = numstim, byrow = TRUE)
   
   if (mode == 1 && numstim > 1) {

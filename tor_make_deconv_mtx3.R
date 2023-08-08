@@ -40,7 +40,7 @@ tor_make_deconv_mtx3 <- function(sf, tp, eres) {
   
   # make deconvolution matrix DX
   index <- 1
-  DX <- matrix(0, nrow = numtrs, ncol = length(tp) + sum(tp))
+  DX <- matrix(0, nrow = numtrs, ncol = length(tp) + sum(tp)-1)
   for (i in seq_along(sf)) {
     if (tbefore != 0) {
       for (j in tbefore:1) {
@@ -66,7 +66,6 @@ tor_make_deconv_mtx3 <- function(sf, tp, eres) {
       index <- index + 1
     }
   }
-  
   # add intercept
   if (nsess < 2) {
     DX <- cbind(DX, rep(1, numtrs))
