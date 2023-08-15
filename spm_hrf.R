@@ -16,21 +16,29 @@ spm_hrf <- function(RT, p = NULL, T = NULL) {
   
   # Modelled haemodynamic response function - {mixture of Gammas}
   dt <- RT / T
-  u <- 0:(ceiling(P[7] / dt)) - P[6] / dt
-  hrf <- (dgamma(u, shape = P[1] / P[3], scale = dt / P[3]) -
-            dgamma(u, shape = P[2] / P[4], scale = dt / P[4]) / P[5])
-  hrf <- hrf[(1:(floor(P[7] / RT))) * T]
-  hrf <- hrf / sum(hrf)
+  u <- seq(0, ceiling(P[7] / dt)) - P[6] / dt
+  hrf <- (spm_Gpdf(u, P[1] / P[3], dt / P[3]) -
+            spm_Gpdf(u, P[2] / P[4], dt / P[4]) / P[5])
+  hrf <- hrf[(0:floor(P[7] / RT)) * T + 1]
   
   return(list(hrf = hrf, p = P))
 }
 
-
-
 # Probability Density Function (PDF) of Gamma distribution
-spm_Gpdf <- function(x, h, l){
-  return(dgamma(x, shape = h, scale = l))
+# f = spm_Gpdf(x, h, l)
+spm_Gpdf <- function(x, h, l) {
+  if (!is.vector(x) || !is.numeric(x) || !is.numeric(h) || !is.numeric(l) || length(h) != 1 || length(l) != 1) {
+    stop("Invalid input: x must be a numeric vector and h, l must be numeric scalars")
+  }
+  
+  
+  # Compute the PDF
+  f <- (l^h * x^(h - 1) * exp(-l * x)) / gamma(h)
+  f[x == 0] <- 0
+  
+  return(f)
 }
+
 
 # Function to get basis functions for event-related responses in R
 spm_get_bf <- function(xBF) {
@@ -91,8 +99,6 @@ spm_get_bf <- function(xBF) {
     bf <- bfp$hrf
     bf <- matrix(bf, ncol = 1)
     p <- bfp$p
-    print("first bf")
-    print(bf)
     
     if (grepl("time", xBF$name)) {
       dp <- 1
@@ -109,42 +115,48 @@ spm_get_bf <- function(xBF) {
   }
   
   # Orthogonalise and fill in basis function structure
-  print("bf")
-  print(bf)
-  
-  xBF$bf <- qr(bf)$qr
-  
+  xBF$bf <- spm_orth(bf)
   return(xBF)
 }
 
-spm_orth <- function(X, OPT = "pad") {
-  # Recursive Gram-Schmidt orthogonalization
+
+# Recursive Gram-Schmidt orthogonalisation of basis functions
+spm_orth <- function(X, OPT = 'pad') {
+  
+  # Recursive Gram-Schmidt orthogonalisation
   n <- nrow(X)
   m <- ncol(X)
-  X <- X[, colSums(X != 0) > 0]  # Remove zero columns
-  
-  rankX <- qr(X)$rank
-  x <- X[, 1]
-  j <- 1
-  
-  for (i in 2:m) {
-    D <- X[, i]
-    D <- D - x %*% (solve(crossprod(x)) %*% D)
-    if (norm(D, type = "1") > exp(-32)) {
-      x <- cbind(x, D)
-      j <- c(j, i)
+  X <- X[, colSums(X) != 0]
+  rankX <- qr(matrix(X))$rank
+  tryCatch({
+    x <- X[, 1]
+    j <- 1
+    for (i in 2:ncol(X)) {
+      D <- X[, i]
+      D <- D - x %*% solve(crossprod(x), crossprod(x, D))
+      if (norm(D, type = "1") > exp(-32)) {
+        x <- cbind(x, D)
+        j <- c(j, i)
+      }
+      if (length(j) == rankX) {
+        break
+      }
     }
-    if (length(j) == rankX) break
-  }
+  }, error = function(e) {
+    x <- matrix(0, nrow = n, ncol = 0)
+    j <- integer(0)
+  })
   
-  # Normalization, if requested
-  if (OPT == "pad") {
-    X <- matrix(0, n, m)
+  # and normalisation, if requested
+  if (OPT == 'pad') {
+    X <- matrix(0, nrow = n, ncol = m)
     X[, j] <- x
-  } else if (OPT == "norm") {
-    X <- x / sqrt(sum(x^2))
+  } else if (OPT == 'norm') {
+    X <- x / sqrt(colSums(x^2))
   } else {
     X <- x
   }
   return(X)
 }
+
+

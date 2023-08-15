@@ -32,6 +32,7 @@ Fit_Canonical_HRF <- function(tc, TR, Run, T, p) {
   
   for (i in 1:d) {
     h <- conv(Run[[i]], CanonicalBasisSet(TR)$h)
+    
     X[, (i - 1) * p + 1] <- h[1:len]
     
     if (p > 1) {
@@ -101,12 +102,18 @@ CanonicalBasisSet <- function(TR) {
   h <- v1
   dh <- v2 - (crossprod(v2, v1)[1,1] / sum(v1^2)) * v1
   dh2 <- v3 - (crossprod(v3, v1)[1,1] / sum(v1^2)) * v1 - (crossprod(v3, dh)[1,1] / sum(dh^2)) * dh
-  
-  h <- h / max(h)
-  dh <- dh / max(dh)
-  dh2 <- dh2 / max(dh2)
-  
-  list(h = h, dh = dh, dh2 = dh2)
+
+  h <- max_normalize(h)
+  dh <- max_normalize(dh)
+  dh2 <- max_normalize(dh2)
   
   return(list(h = h, dh = dh, dh2 = dh2))
+}
+
+max_normalize <- function(x){
+  if (max(abs(x)) == 0) {
+    return (x)
+  } else{
+    return(x/max(abs(x)))
+  }
 }

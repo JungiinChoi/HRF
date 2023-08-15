@@ -16,8 +16,6 @@ get_parameters2 <- function(hdrf, t) {
   }
 
   v <- rep(0, length(hdrf))
-  print(hdrf)
-  print(h/2)
   for (i in 1:length(hdrf)){
     if (h>0){
       v[i] <- (hdrf[i] >= (h/2))
