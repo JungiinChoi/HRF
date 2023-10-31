@@ -20,7 +20,7 @@ Run <- data$Run
 len <- length(tc)
 
 # Plot of true HRF
-ggplot(data = data.frame(xsecs = xsecs[1,], hrf = hrf[,1]), aes(x=xsecs, y=hrf)) +
+ggplot(data = data.frame(xsecs = xsecs, hrf = hrf[,1]), aes(x=xsecs, y=hrf)) +
   geom_line() + 
   theme_minimal() + 
   labs(title="True hrf", x ="t (sec)", y = "")
@@ -40,7 +40,7 @@ alpha = 0.001
 # Variable R contains onset times
 # Variable Run contains stick (a.k.a. delta or indicator) function
 
-#R = c(3, 21, 56, 65, 109, 126, 163, 171, 216, 232, 269, 
+R = c(3, 21, 56, 65, 109, 126, 163, 171, 216, 232, 269, 
       282, 323, 341, 376, 385, 429, 446, 483, 491, 536, 
       552, 589, 602)
 #Run = rep(0,640)
@@ -163,7 +163,7 @@ fit3 = Canonical_HRF_fitted$fit[, 1]
 e3 = Canonical_HRF_fitted$e[, 1]
 param = Canonical_HRF_fitted$param[,1]
 
-pv = ResidScan(e2, FWHM)$p
+pv = ResidScan(e3, FWHM)$p
 
 HRF_df$fit3 <- fit3
 ggplot(HRF_df) +

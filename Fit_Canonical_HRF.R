@@ -83,7 +83,7 @@ Fit_Canonical_HRF <- function(tc, TR, Run, T, p) {
 }
 
 CanonicalBasisSet <- function(TR) {
-  len <- round(30 / TR)
+  len <- round(40 / TR)
   
   # Define basis function structure with required parameters
   xBF <- list()
@@ -93,6 +93,7 @@ CanonicalBasisSet <- function(TR) {
   
   # Get basis functions using spm_get_bf function (implemented separately)
   xBF <- spm_get_bf(xBF)
+  print(xBF$bf)
   
   # Extract basis functions v1, v2, and v3
   v1 <- xBF$bf[1:len, 1]
