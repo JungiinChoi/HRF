@@ -6,8 +6,8 @@ Fit_Spline <- function(tc, TR, Run, T) {
   t <- seq(from = 1, to = T, by = TR)
   tlen <- length(t)        # Number of time points in HRF
   
-  K <- 8                  # Number of b-spline basis
-  norder <- 4             # Order of b-spline basis
+  K <- 5              # Number of b-spline basis (5)
+  norder <- 3             # Order of b-spline basis
   
   # Create design matrix
   basis <- create.bspline.basis(rangeval = c(0, tlen), nbasis = K + 3, norder = norder)
@@ -18,7 +18,6 @@ Fit_Spline <- function(tc, TR, Run, T) {
   for (j in 1:numstim) {
     Wji <- tor_make_deconv_mtx3(matrix(Run[[j]], ncol = 1), tlen, 1)$DX
     Wi[, ((j - 1) * K + 1):(j * K)] <- Wji[, 1:tlen] %*% B
-    
   }
   
   X <- cbind(1, Wi)
@@ -39,7 +38,7 @@ Fit_Spline <- function(tc, TR, Run, T) {
     param[, i] <- tmp
   }
   
-  return(list(hrf = hrf, fit = fit, e = e, param = param))
+  return(list(hrf = hrf, fit = fit, e = e, param = param, b = b, b2 = b2, X = X, B = B))
 }
 
 Fit_Spline_down <- function(tc, TR, Run, T, Down) {

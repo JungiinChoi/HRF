@@ -1,0 +1,349 @@
+---
+title: "Expected Error of Rounded HRF Estimation"
+author: "Jungin Choi"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Case I
+Assume 1) there is a single stimuli, and 2) HRF is linear combination of two basis functions
+
+
+\begin{align*}
+    1)\ n(t) &= I(t_0) \\
+    2)\ h(t|\beta) &= \phi_1(t) \beta_1 + \phi_2(t) \beta_2\\
+\end{align*}
+
+Let us define $f(t|\beta)$ to be the convolution between the hemodynamic response, denoted by $h(t|\beta)$, and a known stimulus function, $n(t)$.
+
+\begin{align*}
+    f(t|\beta) &= (n \cdot h)(t) \\
+    &= \int n(u)h(t-u)du\\
+    &= h(t-t_0)\\
+    &= \phi_1(t-t_0)\beta_1 + \phi_2(t-t_0)\beta_2\\
+\end{align*}
+
+Our linear regression model for the fMRI reponse at time $t_i$ can be written as:
+
+$$y_i = f(t_i | \beta) +\epsilon_i$$
+where $\epsilon_i \sim N(0,V\sigma^2)$. In matrix format,
+
+$$Y = F(X | \beta) +E$$
+where $Y = (y_1, y_2, \cdots, y_N)'$, $E = (\epsilon_1, \epsilon_2, \cdots, \epsilon_N)'$, and
+
+\begin{align*}
+    F(X|\beta) &= (f(t_1 | \beta), \cdots f(t_N | \beta))' \\
+    &= \begin{pmatrix}
+        \phi_1(t_1-t_0) & \phi_2(t_1-t_0) \\ 
+        \vdots & \vdots \\
+        \phi_1(t_N-t_0) & \phi_2(t_N-t_0) \\ 
+        \end{pmatrix} \begin{pmatrix}
+                      \beta_1 \\
+                      \beta_2
+                      \end{pmatrix}\\
+     &:= X\beta                 
+\end{align*}
+
+So here, $Y = X\beta +E$ and $\hat{\beta} = (X'X)^{-1}X'Y$ where $\hat{\beta}$ is fitted by linear regression model.
+
+Let $R(t_0)$ is rounding integer of $t_0$. Thus, for given $t_0$, $R(t_0)$ is also determined (deterministic by $t_0$).
+
+It's well known that $\hat{\beta}$ is unbiased estimator of $\beta$.
+
+$$\mathbb{E} (\hat{\beta}|t_0, R(t_0)) = \mathbb{E}(\hat{\beta}|t_0) = \mathbb{E}((X'X)^{-1}X'Y | t_0) = (X'X)^{-1}X'X\beta = \beta$$
+Now, assume that we only have incomplete information: we only know $R(t_0)$ and don't know exact stimuli time point $t_0$. 
+
+Then, we use a different design matrix convoluted with rounded version of stimuli function $n(t) = I(R(t_0))$.
+ 
+\begin{align*}
+X^* &= \begin{pmatrix}
+        \phi_1(t_1-R(t_0)) & \phi_2(t_1-R(t_0)) \\ 
+        \vdots & \vdots \\
+        \phi_1(t_N-R(t_0)) & \phi_2(t_N-R(t_0)) \\ 
+        \end{pmatrix} \\
+\hat{\beta^*} &= (X^{*'} X^{*})^{-1}X^{*}Y
+\end{align*}
+
+Next, the expectation of $\hat{\beta^*}$ is derived conditional on $R(t_0)$ and $t_0$ as shown below.
+
+Here, let's define $T := X^{*'}(X - X^{*})$. 
+
+\begin{align*}
+\mathbb{E} (\hat{\beta^*}|t_0, R(t_0)) &= \mathbb{E}((X^{*'} X^{*})^{-1}X^{*}Y| t_0, R(t_0)) \\
+  &= (X^{*'} X^{*})^{-1}X^{*} \mathbb{E}(Y | t_0, R(t_0)) \\
+  &= (X^{*'} X^{*})^{-1}X^{*'} X\beta \\
+  &=: (X^{*'} X^{*})^{-1}(X^{*'} X^{*} + T)\beta \\
+  &= \beta + (X^{*'} X^{*})^{-1} T \beta \\
+\end{align*}
+
+
+Suppose we only know $R(t_0)$, and we don't know the exact value of $t_0$. Additionally, we assume:
+
+$$t_0 | R(t_0) \sim U(R(t_0) - 1/2,  R(t_0) + 1/2)$$
+\begin{align*}
+\mathbb{E} (\hat{\beta^*}|R(t_0)) &= \mathbb{E}_{t_0|R(t_0)} (\hat{\beta^*}| t_0, R(t_0)) \\
+  &= \mathbb{E}_{t_0|R(t_0)} [\beta + (X^{*'} X^{*})^{-1} T \beta] \\
+  &=  \beta + (X^{*'} X^{*})^{-1} \mathbb{E}_{t_0|R(t_0)} [T] \beta
+\end{align*}
+
+
+
+Here, 
+
+We can apply Taylor expansion to express $\phi_k(t-t_0)$ as an infinite sum of $\phi_k^{(n)}(t-R(t_0))$ for $k=1,2$, allowing us to calculate the expectation with respect to $t_0$ conditional on $R(t_0)$.
+
+\begin{align*}
+  \phi_k(t-t_0) &= \phi_k(t-R(t_0)) + (R(t_0) - t_0) \phi_k^{'}(t-R(t_0)) + \frac{1}{2}(R(t_0) - t_0)^2\phi_k^{''}(t-R(t_0)) + \cdots \\
+  &= \phi_k(t-R(t_0)) + \sum_{n=1}^{\infty} \frac{1}{n!} (R(t_0) - t_0)^n \phi_k^{(n)}(t-R(t_0))
+  \end{align*}
+
+
+\begin{align*}
+\mathbb{E}_{t_0|R(t_0)} [\phi_k(t-t_0)] &= \phi_k(t-R(t_0)) + \sum_{n=1}^{\infty} \frac{1}{n!} \mathbb{E}_{t_0|R(t_0)}[(R(t_0) - t_0)^n] \phi_k^{(n)}(t-R(t_0))\\ 
+  &= \phi_k(t-R(t_0)) + \sum_{n=0}^{\infty}\ \frac{1}{2^{2n+1}(2n+2)(2n+1)!}\phi_k^{(2n+1)}(t-R(t_0))\\
+  &= \phi_k(t-R(t_0)) + \sum_{n=0}^{\infty}\ \frac{1}{2^{2n+1}(2n+2)!}\phi_k^{(2n+1)}(t-R(t_0))
+\end{align*}
+
+Note:
+
+\begin{align*}
+\mathbb{E}_{t_0|R(t_0)} [(R(t_0) - t_0)^n] &= \int_{R_0-1/2}^{R_0+1/2} (R(t_0)-x)^n dx\\ 
+  &= \int_{-1/2}^{1/2} s^n ds = \frac{(1/2)^{n+1} - (-1/2)^{n+1}}{n+1}
+\end{align*}
+
+Therefore, expectation of $T$ can be expressed as below:
+
+\begin{align*}
+\mathbb{E}_{t_0|R(t_0)}[T] &=  \mathbb{E}_{t_0|R(t_0)}[X^{*'}(X - X^{*})]  \\ 
+  & =  X^{*'}\ \mathbb{E}_{t_0|R(t_0)}[(X - X^{*})]  \\ 
+  & =  X^{*'}\ \mathbb{E}_{t_0|R(t_0)}  \begin{pmatrix}
+        \phi_1(t_1-t_0) - \phi_1(t_1-R(t_0)) & \phi_2(t_1-t_0) - \phi_2(t_1-R(t_0)) \\ 
+        \vdots & \vdots \\
+        \phi_1(t_N-t_0) - \phi_1(t_N-R(t_0)) & \phi_2(t_N-t_0) - \phi_2(t_N-R(t_0)) \\ 
+        \end{pmatrix}  \\ 
+  &=  X^{*'} \mathbb{E}_{t_0|R(t_0)}  \begin{pmatrix}
+        \sum_{n=1}^{\infty}\ \frac{1}{n!} (R(t_0)-t_0)^n\phi_1^{(n)}(t_1-R(t_0)) & \sum_{n=1}^{\infty}\ \frac{1}{n!} (R(t_0)-t_0)^n\phi_2^{(n)}(t_1-R(t_0)) \\
+        \vdots & \vdots \\
+        \sum_{n=1}^{\infty}\ \frac{1}{n!} (R(t_0)-t_0)^n\phi_1^{(n)}(t_N-R(t_0)) & \sum_{n=1}^{\infty}\ \frac{1}{n!} (R(t_0)-t_0)^n\phi_2^{(n)}(t_N-R(t_0))
+        \end{pmatrix}   \\ 
+  &= \begin{pmatrix}
+        \phi_1(t_1-R(t_0)) & \cdots & \phi_1(t_N-R(t_0)) \\ 
+        \phi_2(t_1-R(t_0)) & \cdots & \phi_2(t_N-R(t_0)) \\ 
+        \end{pmatrix}  \\
+        &\times \begin{pmatrix}
+        \sum_{n=0}^{\infty}\ \frac{1}{2^{2n+1}(2n+2)!}\phi_1^{2n+1}(t_1-R(t_0)) & \sum_{n=0}^{\infty}\ \frac{1}{2^{2n+1}(2n+2)!}\phi_2^{2n+1}(t_1-R(t_0)) \\ 
+        \vdots & \vdots \\
+        \sum_{n=0}^{\infty}\ \frac{1}{2^{2n+1}(2n+2)!}\phi_1^{2n+1}(t_N-R(t_0)) & \sum_{n=0}^{\infty}\ \frac{1}{2^{2n+1}(2n+2)!}\phi_2^{2n+1}(t_N-R(t_0)) 
+        \end{pmatrix}   \\ 
+  &= \begin{pmatrix} \sum_{i=1}^N (\phi_1(t_i-R(t_0)) \sum_{n=0}^{\infty} \frac{\phi_1^{(2n+1)}(t_i-R(t_0))}{2^{(2n+1)}(2n+2)!}) & \sum_{i=1}^N (\phi_1(t_i-R(t_0)) \sum_{n=0}^{\infty} \frac{\phi_2^{(2n+1)}(t_i-R(t_0))}{2^{(2n+1)}(2n+2)!}) \\ 
+  \sum_{i=1}^N (\phi_2(t_i-R(t_0)) \sum_{n=0}^{\infty} \frac{\phi_1^{(2n+1)}(t_i-R(t_0))}{2^{(2n+1)}(2n+2)!}) & \sum_{i=1}^N (\phi_2(t_i-R(t_0)) \sum_{n=0}^{\infty} \frac{\phi_2^{(2n+1)}(t_i-R(t_0))}{2^{(2n+1)}(2n+2)!})  \\
+    \end{pmatrix} \\
+  & =: \begin{pmatrix} R_{\phi_1 \phi_1}(\tilde{t}, R(t_0)) & R_{\phi_1 \phi_2}(\tilde{t}, R(t_0))\\
+  R_{\phi_2 \phi_1}(\tilde{t}, R(t_0)) & R_{\phi_2 \phi_2}(\tilde{t}, R(t_0)) \end{pmatrix}
+\end{align*}
+
+
+Therefore, the expectation of the fitted $\hat{\beta^*}$ conditional on $R(t_0)$ is expressed as follows:
+
+\begin{align*}
+\mathbb{E} (\hat{\beta^*}|R(t_0)) 
+  &= \beta + (X^{*'} X^{*})^{-1} \mathbb{E}_{t_0|R(t_0)} (T) \beta \\ 
+  &= \beta + (X^{*'} X^{*})^{-1} \begin{pmatrix} R_{\phi_1 \phi_1}(\tilde{t}, R(t_0)) & R_{\phi_1 \phi_2}(\tilde{t}, R(t_0))\\
+  R_{\phi_2 \phi_1}(\tilde{t}, R(t_0)) & R_{\phi_2 \phi_2}(\tilde{t}, R(t_0)) \end{pmatrix} \beta \\
+\end{align*}
+
+Then, the bias from the true $\beta$ is:
+
+\begin{align*}
+\text{Bias} (\hat{\beta^*}|R(t_0)) \\
+  &= (X^{*'} X^{*})^{-1} \begin{pmatrix} R_{\phi_1 \phi_1}(\tilde{t}, R(t_0)) & R_{\phi_1 \phi_2}(\tilde{t}, R(t_0))\\
+  R_{\phi_2 \phi_1}(\tilde{t}, R(t_0)) & R_{\phi_2 \phi_2}(\tilde{t}, R(t_0)) \end{pmatrix} \beta \\
+    &= \begin{pmatrix} \sum_{i=1}^N \phi_1^2(t_i-R(t_0)) & \sum_{i=1}^N \phi_1(t_i-R(t_0))\phi_2(t_i-R(t_0)) \\
+    \sum_{i=1}^N \phi_2(t_i-R(t_0))\phi_1(t_i-R(t_0)) & \sum_{i=1}^N \phi_2^2 (t_i-R(t_0)) \end{pmatrix}^{-1} \\
+    & \begin{pmatrix} R_{\phi_1 \phi_1}(\tilde{t}, R(t_0)) & R_{\phi_1 \phi_2}(\tilde{t}, R(t_0))\\
+  R_{\phi_2 \phi_1}(\tilde{t}, R(t_0)) & R_{\phi_2 \phi_2}(\tilde{t}, R(t_0)) \end{pmatrix} \beta
+\end{align*}
+
+This seems reasonable because the bias is zero when $R(t_0) = t_0$.
+
+\newpage
+
+# Case II
+
+
+Assume 1) there is a single stimuli, and 2) thre are $k$ basis functions
+
+
+\begin{align*}
+    1)\ n(t) &= I(t_0) \\
+    2)\ h(t|\beta) &= \phi_1(t) \beta_1 + \cdots + \phi_k(t) \beta_k\\
+\end{align*}
+
+Let us define $f(t|\beta)$ to be the convolution between the hemodynamic response, denoted by $h(t|\beta)$, and a known stimulus function, $n(t)$.
+
+\begin{align*}
+    f(t|\beta) &= (n \cdot h)(t) \\
+    &= \int n(u)h(t-u)du\\
+    &= h(t-t_0)\\
+    &= \phi_1(t-t_0)\beta_1 + \cdots \phi_k(t-t_0)\beta_k\\
+\end{align*}
+
+Our linear regression model for the fMRI reponse at time $t_i$ can be written as:
+
+$$y_i = f(t_i | \beta) +\epsilon_i$$
+where $\epsilon_i \sim N(0,V\sigma^2)$. In matrix format,
+
+$$Y = F(X | \beta) +E$$
+where $Y = (y_1, y_2, \cdots, y_N)'$, $E = (\epsilon_1, \epsilon_2, \cdots, \epsilon_N)'$, and
+
+\begin{align*}
+    F(X|\beta) &= (f(t_1 | \beta), \cdots f(t_N | \beta))' \\
+    &= \begin{pmatrix}
+        \phi_1(t_1-t_0) & \cdots & \phi_k(t_1-t_0) \\ 
+        \vdots & \cdots & \vdots \\
+        \phi_1(t_N-t_0) & \cdots & \phi_k(t_N-t_0) \\ 
+        \end{pmatrix} \begin{pmatrix}
+                      \beta_1 \\
+                      \vdots \\
+                      \beta_k
+                      \end{pmatrix}\\
+     &:= X\beta                 
+\end{align*}
+
+So here, $Y = X\beta +E$ and $\hat{\beta} = (X'X)^{-1}X'Y$ where $\hat{\beta}$ is fitted by linear regression model.
+
+Let $R(t_0)$ is rounding integer of $t_0$. Thus, for given $t_0$, $R(t_0)$ is also determined (deterministic by $t_0$).
+
+It's well known that $\hat{\beta}$ is unbiased estimator of $\beta$.
+
+$$\mathbb{E} (\hat{\beta}|t_0, R(t_0)) = \mathbb{E}(\hat{\beta}|t_0) = \mathbb{E}((X'X)^{-1}X'Y | t_0) = (X'X)^{-1}X'X\beta = \beta$$
+Now, assume that we only have incomplete information: we only know $R(t_0)$ and don't know exact stimuli time point $t_0$. 
+
+Then, we use a different design matrix convoluted with rounded version of stimuli function $n(t) = I(R(t_0))$.
+ 
+\begin{align*}
+X^* &= \begin{pmatrix}
+        \phi_1(t_1-R(t_0)) & \cdots & \phi_k(t_1-R(t_0)) \\ 
+        \vdots & \cdots & \vdots \\
+        \phi_1(t_N-R(t_0)) & \cdots & \phi_k(t_N-R(t_0)) \\ 
+        \end{pmatrix} \\
+\hat{\beta^*} &= (X^{*'} X^{*})^{-1}X^{*}Y
+\end{align*}
+
+Next, the expectation of $\hat{\beta^*}$ is derived conditional on $R(t_0)$ and $t_0$ as shown below.
+
+\begin{align*}
+\mathbb{E} (\hat{\beta^*}|t_0, R(t_0)) &= \mathbb{E}((X^{*'} X^{*})^{-1}X^{*}Y| t_0, R(t_0)) \\
+  &= (X^{*'} X^{*})^{-1}X^{*} \mathbb{E}(Y | t_0, R(t_0)) \\
+  &= X^{*'} X\beta \\
+  &= \begin{pmatrix}
+        \phi_1(t_1-R(t_0)) & \cdots & \phi_1(t_N-R(t_0)) \\ 
+        \vdots & \cdots & \vdots \\
+        \phi_k(t_1-R(t_0)) & \cdots & \phi_k(t_N-R(t_0)) \\ 
+        \end{pmatrix} \begin{pmatrix}
+        \phi_1(t_1-t_0) & \cdots & \phi_k(t_1-t_0) \\ 
+        \vdots & \cdots &\vdots \\
+        \phi_1(t_N-t_0) & \cdots & \phi_k(t_N-t_0) \\ 
+        \end{pmatrix} \begin{pmatrix}
+        \beta_1\\ 
+        \vdots \\
+        \beta_k\\
+        \end{pmatrix} \\
+    &= \begin{pmatrix}
+        \sum_{i=1}^N\ \phi_1(t_i-R(t_0))\phi_1(t_i-t_0) & \cdots & \sum_{i=1}^N\ \phi_1(t_i-R(t_0))\phi_k(t_i-t_0) \\ 
+        \vdots & \cdots & \vdots \\
+        \sum_{i=1}^N\ \phi_k(t_i-R(t_0))\phi_1(t_i-t_0) & \cdots & \sum_{i=1}^N\ \phi_k(t_i-R(t_0))\phi_k(t_i-t_0) \\ 
+        \end{pmatrix} \begin{pmatrix}
+        \beta_1\\ 
+        \vdots \\
+        \beta_k\\
+        \end{pmatrix} \\
+    &= \begin{pmatrix}
+        \sum_{i=1}^N\ \phi_i(t_i-R(t_0))\phi_j(t_i-t_0) 
+        \end{pmatrix}_{ij} \begin{pmatrix}
+        \beta_1\\ 
+        \vdots \\
+        \beta_k\\
+        \end{pmatrix} \\
+\end{align*}
+
+
+Suppose we only know $R(t_0)$, and we don't know the exact value of $t_0$. Additionally, we assume:
+
+$$t_0 | R(t_0) \sim U(R(t_0) - 1/2,  R(t_0) + 1/2)$$
+\begin{align*}
+\mathbb{E} (\hat{\beta^*}|R(t_0)) &= \mathbb{E}_{t_0|R(t_0)} (\hat{\beta^*}| t_0, R(t_0)) \\
+  &= \mathbb{E}_{t_0|R(t_0)} [ \begin{pmatrix}
+        \sum_{i=1}^N\ \phi_i(t_i-R(t_0))\phi_j(t_i-t_0) 
+        \end{pmatrix}_{ij} \begin{pmatrix}
+        \beta_1\\ 
+        \vdots \\
+        \beta_k\\
+        \end{pmatrix} ] \\
+\end{align*}
+
+Now, we can streamline the expected bias calculation for $\hat{\beta^*}$ by employing the Taylor expansion of $\phi_j(t-t_0)$.
+
+
+\begin{align*}
+\mathbb{E}_{t_0|R(t_0)} (\phi_j(t-R(t_0))\phi_j(t-t_0)) &= \phi_j(t-R(t_0)) \mathbb{E}_{t_0|R(t_0)} (\phi_j(t-t_0)) \\
+  &= \phi_j(t-R(t_0)) \mathbb{E}_{t_0|R(t_0)} ( \phi_j(t-R(t_0)) + \sum_{n=0}^{\infty} \frac{\phi_j^{(2n+1)}(t-R(t_0))}{2^{(2n+1)}(2n+2)!})
+\end{align*}
+
+\begin{align*}
+\mathbb{E}_{t_0|R(t_0)} (& \sum_{i=1}^N \phi_j(t_i-R(t_0))\phi_j(t_i-t_0)) \\ &= \sum_{i=1}^N \phi_j^2(t_i-R(t_0)) + \sum_{i=1}^N (\phi_j(t_i-R(t_0)) \sum_{n=0}^{\infty} \frac{\phi_j^{(2n+1)}(t_i-R(t_0))}{2^{(2n+1)}(2n+2)!})\\
+  &= 1 + \sum_{i=1}^N (\phi_j(t_i-R(t_0)) \sum_{n=0}^{\infty} \frac{\phi_j^{(2n+1)}(t_i-R(t_0))}{2^{(2n+1)}(2n+2)!})\\
+  &=: 1 + R_{\phi_j \phi_j}(\tilde{t}, t_0) \\
+\end{align*}
+
+In the same way, 
+
+\begin{align*}
+\mathbb{E}_{t_0|R(t_0)} (\phi_j(t-R(t_0))\phi_l(t-t_0)) &= \phi_j(t-R(t_0)) \mathbb{E}_{t_0|R(t_0)} (\phi_l(t-t_0)) \\
+  &= \phi_k(t-R(t_0)) \mathbb{E}_{t_0|R(t_0)} ( \phi_l(t-R(t_0)) + \sum_{n=0}^{\infty} \frac{\phi_j^{(2n+1)}(t-R(t_0))}{2^{(2n+1)}(2n+2)!})
+\end{align*}
+
+
+\begin{align*}
+\mathbb{E}_{t_0|R(t_0)} (& \sum_{i=1}^N \phi_j(t_i-R(t_0))\phi_l(t_i-t_0)) \\     &= \sum_{i=1}^N \phi_j(t_i-R(t_0))\phi_l(t_i-R(t_0)) + \sum_{i=1}^N (\phi_j(t_i-R(t_0)) \sum_{n=0}^{\infty} \frac{\phi_l^{(2n+1)}(t_i-R(t_0))}{2^{(2n+1)}(2n+2)!})\\
+    &= \sum_{i=1}^N (\phi_j(t_i-R(t_0)) \sum_{n=0}^{\infty} \frac{\phi_l^{(2n+1)}(t_i-R(t_0))}{2^{(2n+1)}(2n+2)!})\\
+    &=: R_{\phi_j \phi_l}(\tilde{t}, t_0)
+\end{align*}
+
+Therefore, the expectation of the fitted $\hat{\beta^*}$ conditional on $R(t_0)$ is expressed as follows:
+
+\begin{align*}
+\mathbb{E} (\hat{\beta^*}|R(t_0)) 
+  &= \mathbb{E}_{t_0|R(t_0)} ( \begin{pmatrix}
+        \sum_{i=1}^N\ \phi_1(t_i-R(t_0))\phi_1(t_i-t_0) & \cdots & \sum_{i=1}^N\ \phi_1(t_i-R(t_0))\phi_k(t_i-t_0) \\ 
+        \vdots & \cdots & \vdots \\
+        \sum_{i=1}^N\ \phi_k(t_i-R(t_0))\phi_1(t_i-t_0) & \cdots & \sum_{i=1}^N\ \phi_k(t_i-R(t_0))\phi_k(t_i-t_0) \\ 
+        \end{pmatrix} \begin{pmatrix}
+        \beta_1\\ 
+        \vdots \\
+        \beta_k\\
+        \end{pmatrix} ) \\
+    &= \begin{pmatrix}
+    \beta_1 + R_{\phi_1 \phi_1}(\tilde{t}, t_0)\beta_1 + R_{\phi_1 \phi_2}(\tilde{t}, t_0) \beta_2 + \cdots + R_{\phi_1 \phi_k}(\tilde{t}, t_0) \beta_k\\
+    \vdots \\
+    \beta_k + R_{\phi_2 \phi_1}(\tilde{t}, t_0) \beta_1 + R_{\phi_2 \phi_2}(\tilde{t}, t_0)\beta_2 + \cdots + R_{\phi_2 \phi_k}(\tilde{t}, t_0)\beta_k
+    \end{pmatrix} \\
+\end{align*}
+
+Then, the bias from the true $\beta$ is:
+
+\begin{align*}
+\text{Bias} (\hat{\beta^*}|R(t_0)) 
+    &= \begin{pmatrix}
+    \sum_{j=1}^k R_{\phi_1 \phi_j}(\tilde{t}, t_0)\beta_j\\
+    \vdots \\
+    \sum_{j=1}^k R_{\phi_k \phi_j}(\tilde{t}, t_0)\beta_j\\
+    \end{pmatrix}
+\end{align*}
+
+This seems reasonable because the bias is zero when $R(t_0) = t_0$.
+
+\newpage

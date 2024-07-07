@@ -1,93 +1,87 @@
 tor_make_deconv_mtx3 <- function(sf, tp, eres) {
-  docenter <- 0
-  
   if (!is.list(sf)) {
-    sf <- lapply(1:ncol(sf), function(i) sf[, i])
+    sf2 <- lapply(1:ncol(sf), function(i) sf[, i])
+    sf <- sf2
   }
   
-  if (length(tp) == 1) {
-    tp <- rep(tp, length(sf))
-  }
-  if (length(tp) != length(sf)) {
-    stop("timepoints vectors (tp) and stick function (sf) lengths do not match!")
-  }
+  if (length(tp) == 1) tp <- rep(tp, length(sf))
+  if (length(tp) != length(sf)) stop('timepoints vectors (tp) and stick function (sf) lengths do not match!')
   
-  tbefore <- 0
-  nsess <- length(sf)
-  
+  tbefore <- if (length(args) > 2) args[[3]] else 0
+  nsess <- if (length(args) > 1) args[[2]] else 1
   shiftElements <- eres
   
-  # downsample sf to number of TRs
-  numtrs <- round(length(sf[[1]]) / eres)
-  myzeros <- numeric(numtrs)
-  origsf <- sf
-  
-  for (i in seq_along(sf)) {
-    Snumtrs <- length(sf[[i]]) / eres
-    if (Snumtrs != round(Snumtrs)) {
-      warning(paste("sf[", i, "]: length not evenly divisible by eres."))
-    }
-    if (numtrs != Snumtrs) {
-      warning(paste("sf[", i, "]: different length than sf[[1]]."))
-    }
+  if (length(args) > 4) {
+    numframes <- args[[5]]
+    st <- cumsum(c(1, numframes))
+    en <- st[-1] - 1
+    st <- st[-length(st)]
     
-    inums <- which(sf[[i]] > 0) / eres  # convert to TRs
-    inums <- ceiling(inums)  # nearest TR; use ceiling to avoid issues with onsets between TRs
-    inums[inums == 0] <- 1  # never use 0th element
-    sf[[i]] <- myzeros
-    sf[[i]][inums] <- 1  # always use 1 for sf
-  }
-  
-  # make deconvolution matrix DX
-  index <- 1
-  DX <- matrix(0, nrow = numtrs, ncol = length(tp) + sum(tp)-1)
-  for (i in seq_along(sf)) {
-    if (tbefore != 0) {
-      for (j in tbefore:1) {
-        mysf <- c(sf[[i]][j + 1:length(sf[[i]])], rep(0, j))
-        DX[, index] <- mysf
+    DXs <- lapply(1:length(numframes), function(sess) {
+      sfsess <- lapply(1:length(sf), function(i) sf[[i]][st[sess]:en[sess]])
+      tor_make_deconv_mtx3(sfsess, tp, eres, args[[1]], args[[2]], 0)
+    })
+    
+    DX <- do.call(rbind, DXs)
+    DX <- DX[, -ncol(DX)]
+    DX <- cbind(DX, intercept_model(rep(numframes, length(numframes))))
+    
+  } else {
+    numtrs <- round(length(sf[[1]]) / eres)
+    myzeros <- rep(0, numtrs)
+    origsf <- sf
+    
+    sf <- lapply(sf, function(sfi) {
+      Snumtrs <- length(sfi) / eres
+      if (Snumtrs != round(Snumtrs)) warning(paste('sf{', which(sf == sfi), '}: length not evenly divisible by eres.'))
+      if (numtrs != Snumtrs) warning(paste('sf{', which(sf == sfi), '}: different length than sf{1}.'))
+      inums <- ceiling(which(sfi > 0) / eres)
+      inums[inums == 0] <- 1
+      new_sf <- myzeros
+      new_sf[inums] <- 1
+      new_sf
+    })
+    
+    DX <- matrix(0, nrow = numtrs, ncol = sum(tp) + if (nsess < 2) 1 else nsess)
+    index <- 1
+    
+    for (i in 1:length(sf)) {
+      if (tbefore != 0) {
+        for (j in tbefore:1) {
+          mysf <- c(sf[[i]][(j + 1):numtrs], rep(0, j))
+          DX[, index] <- mysf
+          index <- index + 1
+        }
+      }
+      
+      DX[, index] <- sf[[i]]
+      index <- index + 1
+      inums <- which(sf[[i]] == 1)
+      
+      for (j in 2:tp[i]) {
+        inums <- inums + 1
+        reg <- myzeros
+        reg[inums] <- 1
+        reg <- head(reg, numtrs)
+        while (length(reg) < nrow(DX)) reg <- c(reg, 0)
+        DX[, index] <- reg
         index <- index + 1
       }
     }
     
-    DX[, index] <- sf[[i]]
-    index <- index + 1
-    inums <- which(sf[[i]] == 1)
-    
-    for (j in 2:tp[i]) {
-      inums <- inums + 1  # + 1 because we've downsampled already.  + shiftElements;
-      reg <- myzeros
-      reg[inums] <- 1
-      reg <- reg[1:numtrs]
-      while (length(reg) < nrow(DX)) {
-        reg <- c(reg, 0)  # add 0's if too short
+    if (nsess < 2) {
+      DX[, ncol(DX)] <- 1
+    } else {
+      scanlen <- nrow(DX) / nsess
+      if (round(scanlen) != scanlen) warning('Model length is not an even multiple of scan length.')
+      X <- matrix(0, nrow(DX), nsess)
+      for (startimg in seq(1, nrow(DX), by = scanlen)) {
+        X[startimg:(startimg + scanlen - 1), (startimg - 1) %/% scanlen + 1] <- 1
       }
-      DX[, index] <- reg
-      index <- index + 1
+      DX <- cbind(DX, X)
     }
-  }
-  # add intercept
-  if (nsess < 2) {
-    DX <- cbind(DX, rep(1, numtrs))
-  } else {
-    index <- 1
-    scanlen <- nrow(DX) / nsess
-    if (round(scanlen) != scanlen) {
-      warning("Model length is not an even multiple of scan length.")
-    }
-    X <- matrix(0, nrow = nrow(DX), ncol = nsess)
-    for (startimg in seq(1, nrow(DX), scanlen)) {
-      X[startimg:(startimg + scanlen - 1), index] <- 1
-      index <- index + 1
-    }
-    DX <- cbind(DX, X)
   }
   
-  if (docenter) {
-    # center columns (not intercepts)
-    wh <- 1:(ncol(DX) - nsess)
-    DX[, wh] <- DX[, wh] - matrix(colMeans(DX[, wh]), nrow(DX), length(wh), byrow = TRUE)
-  }
-  
-  return(list(DX = DX, sf = sf))
+  list(DX = DX, sf = sf)
 }
+

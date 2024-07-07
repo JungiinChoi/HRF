@@ -1,0 +1,300 @@
+---
+title: "Spatial Expansion of HRF Estimation Model"
+author: "Jungin Choi"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Non-Spatial (Individual) Model
+
+## I. Canonical + Derivative Model
+
+- \(V\): number of voxels.
+- \(T\): number of timepoints (the length of timecourse data).
+- \(S\): number of experimental designs (stimuli).
+- \(k_{\beta}\): number of \(\beta\)s fitted for each stimulus.
+- For the DD (canonical + derivative) model, \(k_{\beta} = 2\).
+
+- \(Y_i\): timecourse data for the \(i\)th voxel, where \(i = 1, \cdots, V\).
+- \(X_0\):  convoluted design matrix, \(T \times Sk_{\beta}\) matrix.
+
+\[
+X_0 = (n_1 \circ H_c \ \ n_1 \circ H_{c'} \ \cdots \  \ n_{S} \circ H_{c'})
+\]
+
+where \(n_i\) is the onset function for the \(i\)th stimulus, \(H_c\) is a vector of the canonical HRF function, and \(X_{c'}\) is a vector of its derivative. By convoluting each stimulus function with the canonical HRF and its derivative, we obtain the design matrix \(X_0\) for ordinary linear regression.
+
+Then, we assume a normal distribution for the error term in linear regression.
+
+\[Y_i = X_0 \beta_i + \epsilon_i \ \ \text{for}\ \ i= 1, \cdots V, \ \  \epsilon_i \sim N(0,I)\]
+where $\beta_i = (\beta_{1,i}, \cdots , \beta_{Sk_{\beta},i})'$
+
+For the non-spatial model, we can individually fit \(\beta_i\) using the linear regression model.
+
+\[
+\hat{\beta_i} = (X_0'X_0)^{-1}X_0'Y_i
+\]
+
+## II. B-Spline Model
+
+- \(V\): number of voxels.
+- \(T\): number of timepoints (the length of timecourse data).
+- \(S\): number of experimental designs (stimuli).
+- \(k_{\beta}\): number of \(\beta\)s fitted for each stimulus.
+- For the B-Spline model, \(k_{\beta} = 5\), i.e. number of B-sline basis is 5. 
+- \(Y_i\): timecourse data for the \(i\)th voxel, where \(i = 1, \cdots, V\).
+
+We define design matrix $W$ where each column is each B-spline basis. Thus, it's $T \times k_{\beta}$ matrix. 
+Then, \(X_0\) is a  convoluted design matrix, \(T \times Sk_{\beta}\) matrix.
+
+\[
+X_0 = (n_1 \circ W \ \ n_2 \circ W \ \cdots \  \ n_{S} \circ W)
+\]
+
+Then, we assume a normal distribution for the error term in linear regression.
+
+\[Y_i = X_0 \beta_i + \epsilon_i \ \ \text{for}\ \ i= 1, \cdots V, \ \  \epsilon_i \sim N(0,I)\]
+where $\beta_i = (\beta_{1,i}, \cdots , \beta_{Sk_{\beta},i})'$
+
+For the non-spatial model, we can individually fit \(\beta_i\) using the linear regression model.
+
+\[
+\hat{\beta_i} = (X_0'X_0)^{-1}X_0'Y_i
+\]
+
+## III. Smooth FIR Model
+
+- \(V\): number of voxels.
+- \(T\): number of timepoints (the length of timecourse data).
+- \(S\): number of experimental designs (stimuli).
+- \(k_{\beta}\): number of \(\beta\)s fitted for each stimulus.
+- For the Smooth FIR model, \(k_{\beta} = 8\).
+  - order of FIR filter is set to be 8.
+- \(Y_i\): timecourse data for the \(i\)th voxel, where \(i = 1, \cdots, V\).
+
+Assume that $x(t)$ is a T-dimensional vector of stimulus inputs, which is equal to 1 at time $t$ if a stimuli is present at that time point and 0 otherwise. Now we can define the design matrix corresponding to the FIR filter of order $d$ as:
+
+$X_0 = \begin{pmatrix} 
+    x(d)  & \cdots & x(1)\\
+    x(d+1) & \cdots & x(2)\\
+    \vdots &  & & \vdots\\
+    x(T) &   \cdots   &  x(T-d+1)\\ 
+    \end{pmatrix}$
+    
+$$\hat{\beta}_{sFIR,i} = (X_0^TX_0 + \sigma^2\Sigma^{-1})^{-1}X_0^TY_i$$
+where the elements of $\Sigma$ are given by
+
+$$\Sigma_{ij} = v\ \text{exp}(-\frac{h}{2}(i-j)^2),$$
+
+$h = \frac{1}{\sqrt{7/TR}}$, and $\frac{\sigma^2}{v} = 1$.
+
+This is equivalent to the solution of the least-square problem with a penalty function, i.e., $\beta_{sFIR}$ is the solution to the problem:
+
+$$\text{max}\ [ (y-X\beta)^T(y-X\beta) + \sigma^2\Sigma s_{ij}\beta_{i}\beta_j]$$
+where S_{ij} are the components of the matrix $\Sigma^{-1}$.
+
+
+
+## IV. Canonical + Derivative AR(p) Model
+
+
+\newpage
+# Spatial Model: Thin Plate Spline Regression
+
+Using generalized additive model (GAM) thin plate spline regression, our objective is to model \(\beta\) as a spatial model, using 3D coordinates as regressors.
+
+- \(k_{\gamma}\): number of \(\gamma\)s fitted for thin plate spline regression of each \(\beta\).
+
+Each \(\beta\) is modeled as follows:
+
+\[
+(\beta_{k,1}, \beta_{k,2}, \cdots \beta_{k,V})' = B_k \gamma_k, \ \ k = 1,\cdots  Sk_{\beta}
+\]
+
+where \(B_k\) is a \(V \times k_{\gamma}\) model matrix for thin plate spline regression for the \(k\)th \(\beta\), and \(\gamma_k\) is a \(k_{\gamma}\times1\) coefficient vector.
+
+Let \(Y = (Y_1' \ \  Y_2' \ \cdots \ \ Y_V')'\), which is a \(VT \times 1\) vector.
+
+Then,
+
+\[Y = XPB\Gamma + \epsilon, \ \ \epsilon \sim N(0,I)\]
+
+where
+
+- $Y = (Y_1' \ \  Y_2' \ \cdots \ \ Y_V')'$: $VT \times 1$ vector
+- $X = \begin{pmatrix} 
+    X_0 & 0 & \cdots & 0\\
+    0 & X_0 & \cdots & 0\\
+    \vdots & \ddots & &0\\
+    0 &   0   &  \cdots & X_0 
+    \end{pmatrix}$: $VT \times VSk_{\beta}$ matrix
+- $P =$ Permutation matrix: $VSk_{\beta} \times VSk_{\beta}$ matrix
+- $P\begin{pmatrix}
+    \beta_{1,1}\\
+    \beta_{1,2}\\
+    \vdots\\
+    \beta_{Sk_{\beta},V-1}\\
+    \beta_{Sk_{\beta},V}\\
+        \end{pmatrix} = \begin{pmatrix}
+    \beta_{1,1}\\
+    \beta_{2,1}\\
+    \vdots\\
+    \beta_{Sk_{\beta}-1,V}\\
+    \beta_{Sk_{\beta},V}\\
+        \end{pmatrix}$
+
+- $B = \begin{pmatrix}
+    B_1 & 0 & \cdots & 0\\
+    0 & B_2 & \cdots & 0\\
+    \vdots & \ddots & &0\\
+    0 &   0     & \cdots& B_{Sk_{\beta}} 
+        \end{pmatrix}$: $VSk_{\beta} \times Sk_{\beta}k_{\gamma}$ matrix
+
+- $\Gamma = (\gamma_1' , \cdots, \gamma_{Sk_{\beta}}')'$: $Sk_{\beta}k_{\gamma} \times 1$ vector. 
+
+Then we can fit $\Gamma$ using linear regression model. 
+
+$$\hat{\Gamma} = ((XPB)'(XPB))^{-1}(XPB)'Y$$
+Fitted spatial $\beta$ will be expressed as below:
+
+\begin{align*}
+\hat{\beta_S} &= \begin{pmatrix}
+    \hat{\beta_1}\\
+    \hat{\beta_2}\\
+    \vdots \\
+    \hat{\beta_V}\\
+    \end{pmatrix} = PB\hat{\Gamma}
+\end{align*}
+
+\newpage
+
+# Application Results
+
+## Data Description
+
+
+### Valid Voxels
+
+### Timecourse Data
+
+
+
+## I. Canonical + Derivative Model
+
+For the application of spatial modeling for HRF estimation, we utilized data from the HCM primary motor cortex of 30 subjects.
+
+- \(V = 8888\)
+- \(T = 284\)
+- \(S = 6\) 
+  - Cue
+  - Tongue
+  - Left Foot
+  - Right Foot
+  - Left Hand
+  - Right Hand
+- \(k_{\beta} = 2\) for the DD (canonical + derivative) model
+- \(k_{\gamma} = 20\)
+
+## Fitted Beta
+
+We generated plots of the fitted beta for the 6 experimental designs for each voxel, where darker shades of blue represent larger values.
+
+### Expected Motor Homonculus Structure
+
+![](/Users/user/Documents/JHU/research/HRF_Est/HCM_MOTOR/figure/homonculus.png){#id .class width=500}
+
+### Non-spatial (Individual) Model
+
+![](/Users/user/Documents/JHU/research/HRF_Est/HCM_MOTOR/figure/beta_nspat.png){#id .class width=500}
+
+### Spatial Model
+
+![](/Users/user/Documents/JHU/research/HRF_Est/HCM_MOTOR/figure/beta_spat.png){#id .class width=500}
+
+It is clear that the fitted beta for each stimulus design corresponds more closely to the motor homunculus structure for the spatial model compared to the non-spatial model.
+
+\newpage 
+
+## Inference in Beta
+
+We generated plots of p-values for one-sample t-tests of fitted \(\beta\)s among 10 patients using both the non-spatial model and the spatial model. Red points highlight voxels with p-values less than 0.05.
+
+### Non-Spatial Model
+
+![](/Users/user/Documents/JHU/research/HRF_Est/HCM_MOTOR/figure/pvalues_nspat.png){#id .class width=450}
+
+### Spatial Model
+
+![](/Users/user/Documents/JHU/research/HRF_Est/HCM_MOTOR/figure/pvalues_spat.png){#id .class width=450}
+
+We can observe that significant betas (p-values less than 0.05) correspond more clearly to the motor homunculus structure for the spatial model than the non-spatial model.
+
+\newpage
+
+## Fitted Parameters
+
+### Non-Spatial Betas
+
+### Spatial Model
+
+## Mis-modeling with Error Terms
+
+We calculated mis-modeling p-values using Gaussian random field theory, using error terms from fitted and observed timecourse data [Loh, Ji Meng, et al. 2008].
+
+Smaller p-values indicate larger mis-modeling.
+
+![](/Users/user/Documents/JHU/research/HRF_Est/HCM_MOTOR/figure/mismodeling.png){#id .class width=500}
+
+With a threshold of 0.1, it is clear that the spatial model shows less mis-modeling compared to the non-spatial model.
+
+## II. Smooth FIR Model
+
+## Fitted Parameters
+
+## Fitted Betas
+
+## Inference on Beta
+
+## Inference on Fitted Parameters
+
+## Mis-modeling
+
+## III. Spline Model
+
+
+## Fitted Parameters
+
+## Fitted Betas
+
+## Inference on Beta
+
+
+## IV. Canonical + Derivative AR(p) Model
+
+## Fitted Betas
+
+## Inference on Fitted Betas
+
+## Fitted Parameters
+
+## Inference on Fitted Parameters
+
+## Fitted $\phi$
+
+## Spatial Dependency in $\phi$?
+
+\newpage
+
+# Inference on Each Experiment
+
+## Model Specification:
+
+- Full Model: \(Y = X_1\beta_1 + X_2\beta_2 + \cdots + X_6\beta_6 + \epsilon\)
+
+  - where \(\beta_i = (\beta_{i1} , \cdots \beta_{ik_{\beta}})^T\), \(i = 1,\cdots, 6)\)
+  
+- Reduced Model for $i$th Experiment: \(Y = X_1\beta_1 + X_2\beta_2 + \cdots + X_{i-1}\beta_{i-1} + X_{i+1}\beta_{i+1}+ \cdots +X_6\beta_6 + \epsilon\)
+  - This model assumes $\beta_i = 0$

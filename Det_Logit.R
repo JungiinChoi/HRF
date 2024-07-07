@@ -94,3 +94,51 @@ Det_Logit <- function(V0, t, tc, Run) {
   result <- list(VM = VM, hrf = hrf, fit = fit, e = e, param = param)
   return(result)
 }
+
+# Downsampling
+
+## cost function
+msq_logit_down <- function(V, Run, t, tc, down) {
+  numstim <- length(Run)
+  len <- length(Run[[1]])
+  h <- matrix(0, nrow = length(t), ncol = numstim)
+  yhatt <- matrix(0, nrow = len, ncol = numstim)
+  
+  for (k in 1:numstim) {
+    h[, k] <- il_hdmf_tw2(t, V[((k - 1) * 7 + 1):(k * 7)])  # Get IL model corresponding to parameters V
+    yhat <- conv(Run[[k]], h[, k])                     # Convolve IL model with stick function
+    yhatt[, k] <- yhat[1:len]
+  }
+  
+  yhat2 <- rowSums(yhatt)  # Sum models together to get overall estimate
+  
+  m <- sum((tc - yhat2)^2)  # Calculate cost function
+  
+  return(m)
+}
+
+## Main function
+Det_Logit_down <- function(V0, t, tc, Run, down) {
+  numstim <- length(Run)
+  len <- length(Run[[1]])
+  
+  VM <- optim(V0, msq_logit_down, Run = Run, t = t, tc = tc, down = down,
+              control = list(reltol = 1e-6, maxit = 10000))$par
+  
+  hrf <- matrix(0, nrow = length(t), ncol = numstim)
+  fitt <- matrix(0, nrow = len, ncol = numstim)
+  param <- matrix(0, nrow = 3, ncol = numstim)
+  
+  for (g in 1:numstim) {
+    hrf[, g] <- il_hdmf_tw2(t, VM[((g - 1) * 7 + 1):(g * 7)])  # Calculate HRF estimate (fit, given theta)
+    param[, g] <- get_parameters2(hrf[, g], t)  
+    fits <- conv(Run[[g]], hrf[, g])  # Convolve stick function with HRF
+    fitt[, g] <- fits[1:len]
+  }
+  
+  fit <- rowSums(fitt)
+  e <- tc - fit
+  
+  result <- list(VM = VM, hrf = hrf, fit = fit, e = e, param = param)
+  return(result)
+}

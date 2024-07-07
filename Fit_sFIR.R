@@ -39,5 +39,5 @@ Fit_sFIR <- function(tc, TR, Run, T, mode) {
     param[, i] <- get_parameters2(hrf[, i], seq(1, tlen))
   }
   
-  return(list(hrf = hrf, fit = fit, e = e, param = param))
+  return(list(hrf = hrf, fit = fit, e = e, param = param, DX = DX, MRI = MRI))
 }

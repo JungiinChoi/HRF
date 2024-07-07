@@ -1,7 +1,21 @@
-Fit_Logit_allstim_2 <- function(V0, tc, tr, Run, down) {
+# INPUTS:
+
+# V0 - Initial values for IL-model
+# tc - time course data
+# TR - time resolution
+# Runc - a cell array containing stick functions (one for each condition)
+# down - downsampling factor
+
+# OUTPUTS:
+
+# VM - final parameter values for IL-model
+# hrf - estimated HRFs for each condition
+# fit - estimated time course
+
+Fit_Logit_allstim_2 <- function(V0, tc, TR, Runc, down) {
   # Initial values
-  numstim <- length(Run)
-  len <- length(Run[[1]])
+  numstim <- length(Runc)
+  len <- length(Runc[[1]])
   
   LB <- c(0.05, 1, 0, 0.05, 5, 0.05, 8)  # Previous Lower bounds for parameters
   UB <- c(2, 10, 2, 2, 15, 1, 20)
@@ -11,7 +25,9 @@ Fit_Logit_allstim_2 <- function(V0, tc, tr, Run, down) {
   V0 <- rep(V0, numstim)
   
   # Find optimal values
-  result <- optim(par = V0, fn = cost_allstim_2, lower = LB, upper = UB, tr = tr, tc = tc, Run = Run, down = down, control = list(maxit = 100000, trace = 0))
+  result <- optim(par = V0, fn = cost_allstim_2, lower = LB, upper = UB, 
+                  TR = TR, tc = tc, Runc = Runc, down = down, 
+                  control = list(maxit = 100000, trace = 0))
   VM <- result$par
   
   # Use optimal values to fit hemodynamic response functions
@@ -24,7 +40,7 @@ Fit_Logit_allstim_2 <- function(V0, tc, tr, Run, down) {
   }
   
   for (g in 1:numstim) {
-    fits <- convolve(Run[[g]], hrf[, g], type = "open")
+    fits <- conv(Runc[[g]], hrf[, g], type = "open")
     fitt[, g] <- fits[1:len]
   }
   
@@ -34,7 +50,7 @@ Fit_Logit_allstim_2 <- function(V0, tc, tr, Run, down) {
 }
 
 # You would need to define the following functions:
-cost_allstim_2 <- function(par, tr, tc, Run, down) {
+cost_allstim_2 <- function(par, TR, tc, Runc, down) {
   # Define your cost function here
 }
 
@@ -42,6 +58,3 @@ Get_Logit <- function(theta, t) {
   # Define the Get_Logit function here
 }
 
-convolve <- function(a, b, type = "open") {
-  # Define the convolution function here
-}

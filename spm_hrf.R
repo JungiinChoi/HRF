@@ -16,8 +16,6 @@ spm_hrf <- function(RT, p = NULL, T = NULL) {
   
   # Modelled haemodynamic response function - {mixture of Gammas}
   dt <- RT / T
-  print("here is T")
-  print(T)
   u <- seq(0, ceiling(P[7] / dt)) - P[6] / dt
   hrf <- (spm_Gpdf(u, P[1] / P[3], dt / P[3]) -
             spm_Gpdf(u, P[2] / P[4], dt / P[4]) / P[5])

@@ -22,9 +22,15 @@ noise_arp <- function(n, phi = c(0.5, 0.1), sigma = 1, e = rnorm(n, 0, sigma)){
 # Read 25 Downsampled HRF
 raw_HRF <- read.delim("JunginHRF25_Downsample10.txt", header = FALSE)
 HRFdf <- data.frame()
-HRFmat <- matrix(nrow = 25, ncol = 640)
+HRFmat <- matrix(nrow = 35, ncol = 640)
 for (i in 1:25){
   HRF_tmp <- as.numeric(strsplit(raw_HRF[i,], split = "\\s+")[[1]][-1])
+  HRFdf <- rbind(HRFdf, data.frame(index = rep(i,640), x = 0:639, y = HRF_tmp))
+  HRFmat[i,] <- HRF_tmp
+}
+
+for (i in 26:35){
+  HRF_tmp <- as.numeric(strsplit(raw_HRF[i-10,], split = "\\s+")[[1]][-1])
   HRFdf <- rbind(HRFdf, data.frame(index = rep(i,640), x = 0:639, y = HRF_tmp))
   HRFmat[i,] <- HRF_tmp
 }
@@ -32,7 +38,7 @@ for (i in 1:25){
 HRFdf$index <- factor(HRFdf$index)
 
 # Plot the hrf
-ggplot(HRFdf, aes(x = x/10, y, group = index, colour = index)) +
+ggplot(HRFdf, aes(x = x/18, y, group = index, colour = index)) +
   xlab("x") +
   geom_line()
 
@@ -44,7 +50,8 @@ b <- 1
 
 # Set onsets at downsampled resolution
 set.seed(1001)
-R <- sample(1:(640 * Down), 36)
+R_original <- c(13, 14, 29, 44, 107, 125, 160, 171, 174, 190, 191, 206, 215, 232, 237, 262, 277, 292, 296, 346, 354, 367, 375, 382, 384, 398, 409, 462, 469, 475, 501, 520, 527, 566, 577, 629)
+R <- round(R_original + runif(length(R_original), -0.5, 0.5), 1) * 10
 Run <- rep(0, 640 * Down)
 Run <- matrix(Run, ncol = 1)
 Run[R] <- 1
@@ -66,6 +73,20 @@ ggplot(HRF_df) +
   scale_color_manual(name = "", values=c('blue'))
 
 tc <- tc[seq(1, length(tc), by = Down)] # Put data back into original time resolution
+
+
+# Plot the Onset
+onset_original <- rep(-100,640)
+onset_original[R_original] <- R_original
+onset <- rep(-100,6400)
+onset[R] <- R
+
+ggplot() + theme_minimal() +
+  labs(title = "Sample time course", x = "", y = "") +
+  geom_segment(aes(x = onset_original, y = 0, xend = onset_original, yend = 1, colour = "original")) +
+  geom_segment(aes(x = onset, y = 0, xend = onset, yend = 1, colour = "downsampled")) +
+  coord_cartesian(xlim = c(155, 195)) +
+  ylim(0,2) 
 
 # Settings
 numstim <- 1
@@ -117,7 +138,7 @@ for (h in 1:25){
 # Visualization
 
 ## Visualize fitted hrf for each method & each hrf
-h = 3
+h = 25
 p <- ggplot(data.frame(xsecs = seq(1, 30, by = TR / Down), hrf = HRFmat[h,1:581])) + 
   geom_line(aes(x=xsecs, y = hrf), color = "black", size = 1.5)
 
@@ -140,16 +161,17 @@ bias_spline_A <- rep(0,25)
 
 for (h in 1:25){
   mat_list <- sim_list[[h]]
-  bias_spline_A[h] <- mean(mat_list$params_spline[3,]/10 - true_params[h,3]) / true_params[h,3]
+  bias_spline_A[h] <- mean(mat_list$params_spline[1,] - true_params[h,1]) / true_params[h,1]
 }
-length(bias_spline_A)
 
 IL_A <- data.frame(x = factor(round(true_params[,2])), y = factor(true_params[,3]), 
-                   bias = abs(bias_sFIR_A))
+                   bias = abs(bias_spline_A))
 
 ggplot(IL_A, aes(x = x, y = y, fill = bias)) +
   geom_tile(color = "black") +
   coord_fixed() +
   xlab("Time-to-peak") +
   ylab("Width") +
-  scale_fill_gradient(low = "white", high = "green", limits = c(0, 2)) 
+  scale_fill_gradient(low = "white", high = "red", limits = c(0, 1)) 
+
+mean(bias_spline_A)

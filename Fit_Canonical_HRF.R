@@ -32,7 +32,6 @@ Fit_Canonical_HRF <- function(tc, TR, Run, T, p) {
   
   for (i in 1:d) {
     h <- conv(Run[[i]], CanonicalBasisSet(TR)$h)
-    
     X[, (i - 1) * p + 1] <- h[1:len]
     
     if (p > 1) {
@@ -69,7 +68,7 @@ Fit_Canonical_HRF <- function(tc, TR, Run, T, p) {
   }
   
   for (i in 1:d) {
-    hrf[[i]] <- H * b[i, i]
+    hrf[[i]] <- H %*% t(matrix(b[i, ], nrow = 1))
     param[, i] <- get_parameters2(hrf[[i]], 1:length(t))
   }
   
@@ -93,7 +92,6 @@ CanonicalBasisSet <- function(TR) {
   
   # Get basis functions using spm_get_bf function (implemented separately)
   xBF <- spm_get_bf(xBF)
-  print(xBF$bf)
   
   # Extract basis functions v1, v2, and v3
   v1 <- xBF$bf[1:len, 1]
@@ -103,7 +101,7 @@ CanonicalBasisSet <- function(TR) {
   h <- v1
   dh <- v2 - (crossprod(v2, v1)[1,1] / sum(v1^2)) * v1
   dh2 <- v3 - (crossprod(v3, v1)[1,1] / sum(v1^2)) * v1 - (crossprod(v3, dh)[1,1] / sum(dh^2)) * dh
-
+  
   h <- max_normalize(h)
   dh <- max_normalize(dh)
   dh2 <- max_normalize(dh2)

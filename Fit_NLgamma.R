@@ -42,9 +42,6 @@ msq_nl_gamma <- function(V, Run, TR, T, tc) {
   yhatt <- matrix(0, nrow = len, ncol = numstim)
   
   for (k in seq_len(numstim)) {
-    print(NL_gamma(TR, T, V))
-    print(length(NL_gamma(TR, T, V)))
-    print(length(h[, k]))
     h[, k] <- NL_gamma(TR, T, V)  # Get NL gamma model corresponding to parameters V
     yhat <- conv(Run[[k]], h[, k])  # Convolve NL model with stick function
     yhatt[, k] <- yhat[seq_len(len)]
