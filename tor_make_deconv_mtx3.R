@@ -84,4 +84,3 @@ tor_make_deconv_mtx3 <- function(sf, tp, eres) {
   
   list(DX = DX, sf = sf)
 }
-

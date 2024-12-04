@@ -9,7 +9,7 @@ library(stats)
 library(pracma)
 library(scatterplot3d)
 library(graphics)
-setwd("/Users/user/Dropbox (Personal)/SpaceTopEx/subject-0002")
+setwd("/Users/user/Dropbox (Personal)/SpaceTopEx/sub-0002")
 
 
 TR <- 0.460
@@ -17,11 +17,8 @@ nvol <- Tlen <- 872
 
 cue_1 <- round(read_csv("EVs/Cue-Run1.csv")[,-3]/TR)
 exp_1 <- round(read_csv("EVs/Expectrating-Run1.csv")[,-3]/TR)
-stim_1 <- read_csv("EVs/Stimulus-Run1.csv")[,-(3:4)]
+stim_1 <- round(read_csv("EVs/Stimulus-Run1.csv")[,-3]/TR)
 out_1 <- round(read_csv("EVs/Outcomerating-Run1.csv")[,-3]/TR)
-
-stim_1$duration <- stim_1$duration - stim_1$onset
-stim_1 <- round(stim_1/TR)
 
 exp_1$duration[is.na(exp_1$duration)] <- round(mean(exp_1$duration[!is.na(exp_1$duration)]))
 
@@ -62,18 +59,29 @@ ggplot(df_new, aes(x = x, y = y, group = S)) +
   labs(title = "Stimuli function ", x = "t", y = "") 
 
 # Remove nuisance variables
-X <- as.matrix(read.table("EVs/Nuisance-run1.txt", sep = ",",
+X <- as.matrix(read.table("RegionData/EVs1.txt", sep = ",",
                  header = FALSE, quote = "", stringsAsFactors = FALSE))
 
 
-folders <- list.files("/Users/user/Dropbox (Personal)/SpaceTopEx/subject-0002/RegionData", 
-                     recursive = FALSE)
+folders <- list.files("/Users/user/Dropbox (Personal)/SpaceTopEx/sub-0002/RegionData", 
+                     recursive = FALSE)[-1]
 
 numreg <- 268
-dat_list <- vector("list", length = numreg)
-coord_list <- vector("list", length = numreg)
+reglen <- rep(0,numreg)
 
-setwd("/Users/user/Dropbox (Personal)/SpaceTopEx/subject-0002/RegionData")
+setwd("/Users/user/Dropbox (Personal)/SpaceTopEx/sub-0002/RegionData")
+
+for (k in 1:numreg){
+  datastr <- folders[2*k]
+  raw_t1 <- t(read.table(datastr, sep = ",",
+                         header = FALSE, quote = "", stringsAsFactors = FALSE))
+  reglen[k] <- nrow(raw_t1)
+}
+save(reglen, file = "/Users/user/Documents/JHU/research/HRF_Est/Pain/reglen.RData")
+
+dat_list <- list()
+coord_list <- list()
+
 for (k in 1:numreg){
   datastr <- folders[2*k]
   coordstr <- folders[2*k-1]
@@ -94,19 +102,7 @@ for (k in 1:numreg){
   dat_list[[k]] <- dat1
   coord_list[[k]] <- coord_t1
 }
-save(dat_list, coord_list, file = "data_list.RData")
 
 
-
-num <- nrow(dat1)
-
-# Plot average timecourse
-df_tc <- data.frame(t = rep(1:nvol, 300), y = c(t(dat1)), voxel = rep(1:300, each = nvol))
-
-df_tc_tmp <- df_tc 
-ggplot(data = df_tc, aes(x = t, group = voxel)) + 
-  geom_line(aes(y = y)) + 
-  xlab("t") + 
-  theme_bw() +
-  ggtitle("Distribution of Timecourse Data For Region 1")
+save(dat_list, coord_list, file = "/Users/user/Documents/JHU/research/HRF_Est/Pain/data_list.RData")
 

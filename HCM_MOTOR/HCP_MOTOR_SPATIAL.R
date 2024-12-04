@@ -113,21 +113,19 @@ save(gamma_fitted_1, beta_spatial_1, Nonspatial_beta_1,
 
 
 ###############################################################
-
+load("DD_1.RData")
 ### Plot average of spatial betas among 10 subjects
 
-beta_mean <- apply(beta_spatial, c(2,3), mean)
+beta_mean <- apply(beta_spatial_1, c(2,3), mean)
 
 stim_name <- c("Cue", "LF", "RF", "LH", "RH", "Tongue")
 par(mfrow=c(3,2))
-for (j in c(6,3,5)){
+for (j in c(1,6,2:5)){
   for (i in (2*j-1):(2*j)){
     cols <- myColorRamp(c("white", "blue"), beta_mean[,i])
     scatterplot3d(coords[,1],coords[,2],coords[,3], pch = 16, color=cols,
-                  xlab = "x", ylab = "y", zlab = "z", box=FALSE)
-    #legend.col(col = rev(sort(cols)), lev = beta_mean[,i])
+                  xlab = "x", ylab = "y", zlab = "z", box=FALSE, main = stim_name[j])
   }
-  title(stim_name[j], line = -3, outer = TRUE)
 }
 
 ### Plot average of nonspatial betas among 10 subjects
@@ -365,11 +363,11 @@ load("Resfit_list_valid_spline.RData")
 ## MGCV modeling of betas for 10 subjects
 
 ### DD: Canonical HRF + Derivative
-kbeta <- 5
+kbeta <- 3
 
-gamma_fitted_spline <- matrix(0, ncol = 600, nrow = 10)
+gamma_fitted_spline <- matrix(0, ncol = 360, nrow = 10)
 beta_spatial_spline <- array(0, dim = c(10, V, numstim * kbeta))
-load("mgcv_2_spline.RData")
+#load("mgcv_2_spline.RData")
 
 for (l in 6:10){
   Resfit1 <- Resfit_list_valid_spline[[l]]
@@ -377,9 +375,8 @@ for (l in 6:10){
   
   fitted_beta_spline <- matrix(0, nrow = V, ncol = numstim * kbeta)
   for (i in 1:V){
-    fitted_beta_spline[i,] <- c(t(Resfit1[[i]]$b[-1,]))
+    fitted_beta_spline[i,] <- c(t(Resfit1[[i]]$b2))
   }
-  
   Blist <- list(length = (numstim * kbeta))
   for (i in 1:(numstim * kbeta)){
     gam_df <- data.frame(beta = fitted_beta_spline[,i], x = coords[,1], 
@@ -404,19 +401,53 @@ for (l in 6:10){
   }
 }
 
-#X <- X[,-1]
+#X <- fit$X[,-1]
 #X_ext <- bdiag(replicate(V, X, simplify = FALSE))
 
 #i_perm <- 1:(numstim * kbeta * V)
 #j_perm <- c()
 #for (i in 1:V){
-#  j_perm <- c(j_perm, (0:29)*V+i)
+#  j_perm <- c(j_perm, (0:17)*V+i)
 #}
 #perm <- sparseMatrix(i = i_perm, j = j_perm, x = 1) 
 
 #save(X_ext, perm, file = "mgcv_2_spline.RData")
 
 #############################################
+
+hrf_spline <- array(0,dim=c(10,8888,6,41))
+
+for (k in 1:10){
+  for (i in 1:8888){
+    for (j in 1:6){
+      # Get parameters
+      hrf_tmp <- fit$B %*% matrix(beta_spatial_spline[k,i,], nrow = 3, ncol = 6)
+      hrf_spline[k,i,j,] <- hrf_tmp[,j]
+    }
+  }
+}
+hrf_spline_mean <- apply(hrf_spline, c(1,3,4), mean)
+hrf_spline_long <- c()
+for (i in 1:10){
+  for (j in 1:6){
+    hrf_spline_long <- c(hrf_spline_long, hrf_spline_mean[i,j,])
+  }
+}
+
+hrf_spline_df <- data.frame(t = rep(1:41, 10*6), hrf = hrf_spline_long, 
+                            stimuli = as.factor(rep(rep(1:6, each = 41),10)),
+                            ppl = as.factor(rep(1:10, each = 6*41)))
+
+ggplot(hrf_spline_df, aes(t, hrf, group = interaction(stimuli,ppl))) +
+  geom_line(aes(color = stimuli)) +
+  labs(title = "Non-spatial HRF Distribution",
+       x = "Time",
+       y = "y",
+       fill = "Stimuli",
+       color = "Stimuli") +
+  theme_bw() +
+  theme(legend.position = "right")
+
 
 # Non-spatial Amplitude
 
@@ -462,19 +493,17 @@ for (j in c(1,6,2:5)){
 
 # Plot Spatial Amplitude
 
-A_spline_spatial <- T_spline_spatial <- W_spline_spatial <- array(0, dim = c(5, V, numstim))
+A_spline_spatial <- T_spline_spatial <- W_spline_spatial <- array(0, dim = c(10, V, numstim))
 
-TR <- 0.72
+B <- fit$B
 
-for (i in 1:5){
+for (i in 1:10){
   for (k in 1:V){
-    b2 <- matrix(beta_spatial_spline[i,k,], nrow = 5, ncol = numstim)
-    hrf <- B %*% b2
+    b2 <- matrix(beta_spatial_spline[i,k,], nrow = numstim, ncol = 3, byrow = TRUE)
     for (j in 1:numstim) {
-      param_tmp <- get_parameters2(hrf[, j], 1:41)
+      hrf_tmp <- B %*% t(matrix(b2[j,], nrow=1))
+      param_tmp <- get_parameters2(hrf_tmp, 1:41)
       A_spline_spatial[i,k,j] <- param_tmp[1]
-      T_spline_spatial[i,k,j] <- param_tmp[2]
-      W_spline_spatial[i,k,j] <- param_tmp[3]
     }
   }
 }
@@ -581,6 +610,7 @@ for (i in 1:V){
   T_sFIR_fit[i, ] <- Resfit_valid_sFIR[[i]]$param[2,]
   W_sFIR_fit[i, ] <- Resfit_valid_sFIR[[i]]$param[3,]
 }
+
 # Plot Non-Spatial Amplitude
 
 
@@ -598,32 +628,37 @@ T_spline_mean <- apply(T_spline_fit, c(2,3), mean)
 ## MGCV modeling of betas for 10 subjects
 
 ### DD: Canonical HRF + Derivative
-kbeta <- 247
+kbeta <- 41
 
-gamma_fitted_spline <- matrix(0, ncol = 600, nrow = 10)
+gamma_fitted_spline <- matrix(0, ncol = 4920, nrow = 10)
 beta_spatial_spline <- array(0, dim = c(V, numstim * kbeta))
 
-Resfit1 <- Resfit_list_valid_spline[[l]]
-dat1 <- dat_list_valid[[l]]
+Resfit1 <- Resfit_list_valid_sFIR[[1]]
+dat1 <- dat_list_valid[[1]]
   
-fitted_beta_spline <- matrix(0, nrow = V, ncol = numstim * kbeta)
+fitted_beta_sfir <- matrix(0, nrow = V, ncol = numstim * kbeta)
 for (i in 1:V){
-  fitted_beta_spline[i,] <- c(t(Resfit1[[i]]$b[-1,]))
+  fitted_beta_sfir[i,] <- c(t(Resfit1[[i]]$b[-247,]))
 }
   
-Blist <- list(length = (numstim * kbeta))
-for (i in 1:(numstim * kbeta)){
-  gam_df <- data.frame(beta = fitted_beta_spline[,i], x = coords[,1], 
+for (i in 1:1){
+  gam_df <- data.frame(beta = fitted_beta_sfir[,i], x = coords[,1], 
                        y = coords[,2], z = coords[,3])
   gamfit <- gam(beta ~ s(x,y,z, k = 20), data = gam_df, method = "REML")
-  Blist[[i]] <- as.matrix(model.matrix(gamfit))
+  Blist <- as.matrix(model.matrix(gamfit))
 }
-B <- bdiag(Blist)
+
+B <- bdiag(replicate(246, Blist,  simplify = FALSE))
 PB <- perm %*% B
 y_ext <- c(t(dat1))
   
+XPB <- X_ext %*% PB
 XtX <- t(X_ext) %*% X_ext
-BPXtX <- t(PB) %*% XtX
+BPXtX <- crossprod(B,PXtX) 
+
+PXtX <- t(perm) %*% XtX
+PXtXP <- PXtX %*% perm
+A <- t(B) %*% PXtXP %*% B
 A <- BPXtX %*% PB
 Xty_ext <- t(X_ext) %*% y_ext
 b <- t(PB) %*% Xty_ext
@@ -634,16 +669,18 @@ for (i in 1:(numstim * kbeta)){
   beta_spatial_spline[l,,i] <- (Blist[[i]] %*% gamma_fitted_spline[l,(1+(i-1)*20):(i*20)])[,1]
 }
 
+save(PB, y_ext, BPXtX, file = "sfir.RData")
 
-X <- Resfit_valid_sFIR[[1]]$DX
-X_ext <- bdiag(replicate(V, X, simplify = FALSE))
 
-i_perm <- 1:(numstim * kbeta)
+#X <- Resfit_valid_sFIR[[1]]$DX[,-247]
+#X_ext <- bdiag(replicate(V, X, simplify = FALSE))
+
+#i_perm <- 1:(numstim * kbeta*V)
 #j_perm <- c()
 #for (i in 1:V){
-#  j_perm <- c(j_perm, (0:29)*V+i)
+#  j_perm <- c(j_perm, (0:245)*V+i)
 #}
 #perm <- sparseMatrix(i = i_perm, j = j_perm, x = 1) 
 
-#save(X_ext, perm, file = "mgcv_2_spline.RData")
+save(X_ext, perm, file = "mgcv_2_sfir.RData")
 

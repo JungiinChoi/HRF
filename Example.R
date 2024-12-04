@@ -12,11 +12,13 @@ library(ggplot2)
 #hrf <- data$hrf
 #len <- length(tc)
 
-data <- readMat("/Users/user/Documents/MATLAB/HRF_Est_Toolbox3/tc.mat")
+data <- readMat("/Users/user/Documents/Documents - MacBook Air (2)/MATLAB/HRF_Est_Toolbox3/tc.mat")
 tc <- data$tc
 tc <- scale(tc)[,1]
 R <- data$R
+xsecs <- data$xsecs
 Run <- data$Run
+hrf <- data$hrf
 len <- length(tc)
 
 # Plot of true HRF

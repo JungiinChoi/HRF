@@ -6,15 +6,15 @@ library(ggplot2)
 R <- readMat("/Users/user/Documents/MATLAB/HRF_Est_Toolbox3/stimuli.mat")$R
 Run <- matrix(0, nrow = 640, ncol = 1)
 Run[R,1] <- 1
-len <- length(tc)
+len <- 640
 
 hrf <- readMat("/Users/user/Documents/MATLAB/HRF_Est_Toolbox3/true_hrf.mat")$hrf[,1]
 xsecs <- seq(0, 40, by = 0.5)
 
 tc_mat <- matrix(0,nrow = len, ncol = 100)
-fitted_hrf_IL <- matrix(0, nrow = 30, ncol = 100)
-params_IL <- matrix(0, nrow = 3, ncol = 100)
-MSE_IL <- matrix(0, nrow = 2, ncol = 100)
+#fitted_hrf_IL <- matrix(0, nrow = 30, ncol = 100)
+#params_IL <- matrix(0, nrow = 3, ncol = 100)
+#MSE_IL <- matrix(0, nrow = 2, ncol = 100)
 fitted_hrf_sFIR <- matrix(0, nrow = 30, ncol = 100)
 params_sFIR <- matrix(0, nrow = 3, ncol = 100)
 MSE_sFIR <- matrix(0, nrow = 2, ncol = 100)
@@ -24,9 +24,9 @@ MSE_DD <- matrix(0, nrow = 2, ncol = 100)
 fitted_hrf_spline <- matrix(0, nrow = 30, ncol = 100)
 params_spline <- matrix(0, nrow = 3, ncol = 100)
 MSE_spline <- matrix(0, nrow = 2, ncol = 100)
-fitted_hrf_NL <- matrix(0, nrow = 30, ncol = 100)
-params_NL <- matrix(0, nrow = 3, ncol = 100)
-MSE_NL <- matrix(0, nrow = 2, ncol = 100)
+#fitted_hrf_NL <- matrix(0, nrow = 30, ncol = 100)
+#params_NL <- matrix(0, nrow = 3, ncol = 100)
+#MSE_NL <- matrix(0, nrow = 2, ncol = 100)
 
 # Settings
 
@@ -57,11 +57,11 @@ for (i in 1:100){
   tc_mat[,i] <- tc
   
   #IL
-  Logit2_fitted <- Fit_Logit2(tc, TR, Runc, T, 0)
-  fitted_hrf_IL[,i] <- Logit2_fitted$hrf
-  params_IL[,i] <- Logit2_fitted$param
-  e1 <- Logit2_fitted$e
-  MSE_IL[,i] <- c((1 / (len - 1) * sum(e1^2)), ResidScan(e1, FWHM)$p)
+  #Logit2_fitted <- Fit_Logit2(tc, TR, Runc, T, 0)
+  #fitted_hrf_IL[,i] <- Logit2_fitted$hrf
+  #params_IL[,i] <- Logit2_fitted$param
+  #e1 <- Logit2_fitted$e
+  #MSE_IL[,i] <- c((1 / (len - 1) * sum(e1^2)), ResidScan(e1, FWHM)$p)
   
   #sFIR
   sFIR_fitted <- Fit_sFIR(tc, TR, Runc, T, 1)
@@ -85,33 +85,33 @@ for (i in 1:100){
   MSE_spline[,i] <- c((1 / (len - 1) * sum(e4^2)), ResidScan(e4, FWHM)$p)
   
   #non-linear gamma function
-  NLgamma_fitted <- Fit_NLgamma(tc, TR, Runc, T)
-  fitted_hrf_NL[,i] <- NLgamma_fitted$hrf[,1]
-  params_NL[,i] <- NLgamma_fitted$param[,1]
-  e5 = NLgamma_fitted$e
-  MSE_NL[,i] <- c((1 / (len - 1) * sum(e5^2)), ResidScan(e5, FWHM)$p)
+  #NLgamma_fitted <- Fit_NLgamma(tc, TR, Runc, T)
+  #fitted_hrf_NL[,i] <- NLgamma_fitted$hrf[,1]
+  #params_NL[,i] <- NLgamma_fitted$param[,1]
+  #e5 = NLgamma_fitted$e
+  #MSE_NL[,i] <- c((1 / (len - 1) * sum(e5^2)), ResidScan(e5, FWHM)$p)
 }
 
 p <- ggplot(data.frame(xsecs = xsecs[1:30], hrf = hrfmat[1,])) + 
   geom_line(aes(x=xsecs, y = hrf), color = "black", size = 1.5)
 
 for (i in 1:100){
-  hrf_IL <- fitted_hrf_IL[,i]  
+  #hrf_IL <- fitted_hrf_IL[,i]  
   hrf_sFIR <- fitted_hrf_sFIR[,i]
   hrf_DD <- fitted_hrf_DD[,i]
   hrf_Spline <- fitted_hrf_spline[,i]
-  hrf_NL <- fitted_hrf_NL[,i]
+  #hrf_NL <- fitted_hrf_NL[,i]
   
-  p <- p + geom_line(data = data.frame(xsecs = xsecs[1:30], hrf = hrf_IL),
-    aes(x = xsecs, y = hrf, colour = "IL"), alpha=0.2)
+  #p <- p + geom_line(data = data.frame(xsecs = xsecs[1:30], hrf = hrf_IL),
+  #  aes(x = xsecs, y = hrf, colour = "IL"), alpha=0.2)
   p <- p + geom_line(data = data.frame(xsecs = xsecs[1:30], hrf = hrf_sFIR),
                      aes(x = xsecs, y = hrf, color = "sFIR"), alpha=0.2)
   p <- p + geom_line(data = data.frame(xsecs = xsecs[1:30], hrf = hrf_DD),
                      aes(x = xsecs, y = hrf, color = "DD"), alpha=0.2)
   p <- p + geom_line(data = data.frame(xsecs = xsecs[1:30], hrf = hrf_Spline),
                      aes(x = xsecs, y = hrf, color = "Spline"), alpha=0.2)
-  p <- p + geom_line(data = data.frame(xsecs = xsecs[1:30], hrf = hrf_NL),
-                     aes(x = xsecs, y = hrf, color = "NL"), alpha=0.2)
+  #p <- p + geom_line(data = data.frame(xsecs = xsecs[1:30], hrf = hrf_NL),
+  #                   aes(x = xsecs, y = hrf, color = "NL"), alpha=0.2)
 }
 
 p + scale_color_manual(name = "", values = c("IL" = "red", "sFIR" = "green", "DD" = "magenta", "Spline" = "blue", "NL" = "yellow"))

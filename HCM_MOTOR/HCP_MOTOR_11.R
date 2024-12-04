@@ -189,7 +189,6 @@ df <- data.frame(
 
 ggplot(df, aes(x = x, y = y, group = S)) +
   geom_line(aes(color = S)) +
-  facet_wrap(vars(S)) +
   labs(title = "Stimuli function ", x = "t", y = "") 
 
 
@@ -269,6 +268,15 @@ for (k in 1:10){
   Resfit_list_valid_spline[[k]] <- Resfit
 }
 
+## Plot HRF
+plot(1:41, fit$hrf[,1], type = "l", col = "white", ylim = c(-30,100))
+Resfit<- Resfit_list_valid_spline[[1]] 
+for (i in 1:V){
+  lines(1:41, Resfit[[i]]$hrf[,5])
+}
+
+## Plot basis of HRF
+plot(1:41,B[,3])
 
 setwd("/Users/user/Documents/JHU/research/HRF_Est/HCM_MOTOR")
 save(Resfit_list_valid_spline, file = "Resfit_list_valid_spline.RData")
@@ -277,9 +285,9 @@ save(Resfit_list_valid_spline, file = "Resfit_list_valid_spline.RData")
 
 # sFIR method for 10 ppl
 
-Resfit_list_valid_sFIR <- vector("list", length = K)
+Resfit_list_valid_sFIR <- vector("list", length = 10)
 V <- nrow(dat_list_valid[[1]])
-for (k in 1:10){
+for (k in 1:1){
   Resfit <- list()
   dat <- dat_list_valid[[k]]
   Runc <- Runc_list[[1]]
@@ -300,6 +308,7 @@ for (k in 1:1){
     MRI <- fit$MRI
   }
 }
+
 par(mfrow=c(1,1))
 plot(1:560, DX[,244], type="l")
 for (i in 2:247){

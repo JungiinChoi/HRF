@@ -1,0 +1,87 @@
+---
+title: "Comparing fit_gls.m and fit_fgls.m"
+output: html_document
+---
+
+### Objectives
+1. Compare the runtime of `fit_gls` and `fit_fgls`.
+2. Evaluate the estimation accuracy of the coefficients for different:
+   - Number of observations (\( T \)).
+   - AR model orders (\( p \)).
+   - Variance settings (\( \sigma^2 \)).
+   
+### fit_fgls
+The `fit_fgls` function leverages MATLAB's built-in `fgls` method to perform GLS estimation with AR(\( p \)) innovations.
+
+---
+
+## Simulation Settings
+
+### Data Generation
+
+The response variable \( y \) is generated using the following model:
+\[
+y_t = \mathbf{X}_t \boldsymbol{\beta} + \epsilon_t
+\]
+where:
+
+  - \( \mathbf{X} \): Design matrix (\( T \times 3 \)) including an intercept and two predictors.
+  
+  - \( \boldsymbol{\beta} = [2, 3, -1]^T \): True coefficients.
+  
+  - \( \epsilon_t \): Follows an AR(\( p \)) process:
+  
+\[
+\epsilon_t = \phi_1 \epsilon_{t-1} + \phi_2 \epsilon_{t-2} + \dots + \phi_p \epsilon_{t-p} + \nu_t
+\]
+with \( \nu_t \sim N(0, \sigma^2) \) and \( \phi_i = 0.5\)
+
+### Simulation Parameters
+- **Number of Observations (\( T \))**: 300, 500, 1000.
+- **AR Orders (\( p \))**: 1, 2, 3.
+- **Variance (\( \sigma^2 \))**: 1, 2, 5.
+
+
+---
+
+## Results
+
+
+#### Runtime Results Table
+
+```{r, echo=FALSE, out.width="80%"}
+knitr::include_graphics("/Users/user/Desktop/fgls_table.png")
+```
+
+
+#### Runtime Comparison Plot
+
+```{r, echo=FALSE, out.width="80%"}
+knitr::include_graphics("/Users/user/Desktop/accuracy.png")
+```
+
+```{r, echo=FALSE, out.width="80%"}
+knitr::include_graphics("/Users/user/Desktop/runtime.png")
+```
+
+
+
+
+---
+
+## Discussion
+- **Runtime**: 
+  - `fit_fgls` is consistently faster than `fit_gls`, particularly for larger datasets and higher AR orders.
+  - The performance gap increases as the dataset size grows.
+
+- **Estimation Accuracy**:
+  - Both methods perform similarly in terms of estimation accuracy.
+  - `fit_fgls` shows slightly lower errors, particularly for larger datasets and higher AR orders.
+
+---
+## Conclusion
+
+This simulation study demonstrates that:
+1. `fit_fgls` is more efficient in terms of runtime, particularly for larger datasets.
+2. Both methods provide accurate parameter estimates, but `fit_fgls` is slightly more reliable for complex settings.
+

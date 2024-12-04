@@ -1,0 +1,189 @@
+---
+title: "Simulation"
+author: "Jungin Choi"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message = FALSE, warning= FALSE}
+library(ggplot2)
+library(tidyverse)
+library(sp)
+library(gstat)
+library(raster)
+library(stats)
+```
+
+# Simulation Setting
+
+$$A = {(x_1, x_2) | x_1^2 + x_2^2 \geq 10^2}$$
+
+```{r echo = FALSE, out.width="50%"}
+x <- seq(-10,10,length = 50)
+y <- seq(-10,10,length = 50)
+coords <- expand.grid(x = x, y = y) %>% filter(x^2 + y^2 <= 10^2)
+
+# Plot using ggplot2
+ggplot(coords, aes(x = x, y = y)) +
+  geom_point(alpha = 0.6, color = 'blue', size = 1) +
+  coord_fixed() +
+  theme_minimal() +
+  labs(title = "Uniformly Distributed Coordinates within a 2D Circular Region",
+       x = "X Coordinate",
+       y = "Y Coordinate") +
+  xlim(-10, 10) +
+  ylim(-10, 10) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+$$\beta_{1,x_1,x_2} = 10|sin(\frac{x_1}{2.5}) + cos(\frac{x_2}{2.5})|$$
+$$\beta_{2,x_1,x_2} = 5|sin(\frac{x_1}{3}) + cos(\frac{x_2}{3})|$$
+
+\begin{align*}
+  h(t,x_1,x_2) &= \beta_{1,x_1,x_2} \cdot C(t) + \beta_{2,x_1,x_2} \cdot C^{'}(t)\\ 
+  n(t) &= 1{onsets}\\
+\end{align*}
+
+```{r echo = FALSE, out.width="50%"}
+# Example coordinates
+set.seed(123)  # For reproducibility
+coords <- data.frame(x = coords$x, y= coords$y)
+coords$beta1 <- abs(with(coords, sin(x/2.5) * cos(y/2.5)))*10
+coords$beta2 <- abs(with(coords, cos(x/3) * sin(y/3)))*5
+
+# Plot the spatial distribution of interpolated values
+ggplot(coords, aes(x = x, y = y, fill = beta1)) +
+  geom_tile() +
+  theme_minimal() +
+  labs(title = "Spatially Dependent Variable",
+       x = "X Coordinate",
+       y = "Y Coordinate",
+       fill = "True Beta 1") +
+  coord_fixed()
+
+# Plot the spatial distribution of interpolated values
+ggplot(coords, aes(x = x, y = y, fill = beta2)) +
+  geom_tile() +
+  theme_minimal() +
+  labs(title = "Spatially Dependent Variable",
+       x = "X Coordinate",
+       y = "Y Coordinate",
+       fill = "True Beta 2") +
+  coord_fixed()
+```
+
+For simulation, generate 100 timecourse data with AR(p) white noise. In this case, AR(1) model with $\phi = 0.3$.
+
+
+\begin{align*}
+Y(t,x_1,x_2) &= n(t) \cdot h(t,x_1,x_2) + \epsilon(t) & where\ \epsilon \sim AR(1)\\
+\epsilon(t) &= \phi \cdot \epsilon(t-1) + \delta, & \delta \sim N(0,\sigma^2)\\
+\end{align*}
+
+## 0. Independent Model
+
+$Y_V = n \cdot h + \epsilon  = X\beta_V + \epsilon$ where $\epsilon \sim AR(1)$
+
+where \begin{align*} 
+Y = \begin{pmatrix}
+Y(1)\\ Y(2)\\ \vdots \\ Y(T) \\
+\end{pmatrix}, & X = \begin{pmatrix}
+C(1) & C^{'}(1)\\ \vdots \\ C(T) & C^{'}(T) \\
+\end{pmatrix}, & \beta = \begin{pmatrix}
+\beta_1 \\ \beta_2
+\end{pmatrix}
+\end{align*}
+
+$\hat{\beta_V} = (X^{'}\Sigma^{-1}X)^{-1}X^{'}\Sigma^{-1}Y_V$ where \begin{align*} 
+\Sigma = Cov(\epsilon) = \frac{\sigma^2}{1-\phi^2}\begin{pmatrix}
+1 & \phi & \phi^2 & \cdots & \phi^{T-1}\\
+\phi & 1 &  & \cdots & \phi^{T-2}\\
+\vdots &  &   & \vdots\\
+\phi^{T-1} & \cdots &  &  & 1\\
+\end{pmatrix}
+\end{align*}
+
+
+## 1. Gaussian Kernel Smoothing
+
+$$\tilde{Y}(t,x_1,x_2) = \frac{\sum_i K(x_{1i}, x_{2i}| x_1, x_2, \sigma)Y(t,x_{1i}, x_{2i})}{\sum_i K(x_{1i}, x_{2i}| x_1, x_2, \sigma)}$$
+
+$$\text{where   } K(x_{1}, x_{2}| \mu_1, \mu_2, \sigma) = \frac{1}{2\pi\sigma^2}exp(-\frac{(x_1-\mu_1)^2 + (x_2-\mu_2)^2}{2\sigma^2})$$
+
+\begin{align*} \tilde{Y}_V = \tilde{Y}(x_1,x_2) = \begin{pmatrix}
+\tilde{Y}(1,x_1,x_2)\\ \vdots \\ \tilde{Y}(T,x_1,x_2)\\
+\end{pmatrix}
+\end{align*}
+
+$$\hat{\tilde{\beta_V}} = (X^{'}\Sigma^{-1}X)^{-1}X^{'}\Sigma^{-1}\tilde{Y_V}$$
+
+\begin{align*}\mathbb{E}(\hat{\tilde{\beta_V}}) &= \mathbb{E}((X^{'}\Sigma^{-1}X)^{-1}X^{'}\Sigma^{-1}\tilde{Y_V}) \\
+&= (X^{'}\Sigma^{-1}X)^{-1}X^{'}\Sigma^{-1}\mathbb{E}\tilde{Y_V}
+\end{align*}
+
+We know that $\mathbb{E}(Y) = X\beta$.
+
+\begin{align*} \mathbb{E}(\tilde{Y}(t,x_1,x_2)) &= \mathbb{E}(\frac{\sum_i K(x_{1i}, x_{2i}| x_1, x_2, \sigma)Y(t,x_{1i}, x_{2i})}{\sum_i K(x_{1i}, x_{2i}| x_1, x_2, \sigma)})\\
+&= \frac{\sum_i K(x_{1i}, x_{2i}| x_1, x_2, \sigma)\mathbb{E}(Y(t,x_{1i}, x_{2i}))}{\sum_i K(x_{1i}, x_{2i}| x_1, x_2, \sigma)}
+\end{align*}
+
+$$\mathbb{E}(\tilde{Y}(x_1,x_2)) = \frac{\sum_i K(x_{1i}, x_{2i}| x_1, x_2, \sigma)X\beta_{x_{1i}, x_{2i}}}{\sum_i K(x_{1i}, x_{2i}| x_1, x_2, \sigma)}$$
+
+$$\therefore \mathbb{E}(\hat{\tilde{\beta}(x_1,x_2)}) = \frac{\sum_i K(x_{1i}, x_{2i}| x_1, x_2, \sigma)\beta_{x_{1i}, x_{2i}}}{\sum_i K(x_{1i}, x_{2i}| x_1, x_2, \sigma)}$$
+
+
+## 2. Thin Plate Spline Regression (TPSR) for Beta
+
+\[Y = XPB\Gamma + \epsilon, \ \ \epsilon \sim N(0,I)\]
+
+where
+
+- $Y = (Y_1' \ \  Y_2' \ \cdots \ \ Y_V')'$: $VT \times 1$ vector
+- $X = \begin{pmatrix} 
+    X_0 & 0 & \cdots & 0\\
+    0 & X_0 & \cdots & 0\\
+    \vdots & \ddots & &0\\
+    0 &   0   &  \cdots & X_0 
+    \end{pmatrix}$: $VT \times VSk_{\beta}$ matrix
+- $P =$ Permutation matrix: $VSk_{\beta} \times VSk_{\beta}$ matrix
+- $P\begin{pmatrix}
+    \beta_{1,1}\\
+    \beta_{1,2}\\
+    \vdots\\
+    \beta_{Sk_{\beta},V-1}\\
+    \beta_{Sk_{\beta},V}\\
+        \end{pmatrix} = \begin{pmatrix}
+    \beta_{1,1}\\
+    \beta_{2,1}\\
+    \vdots\\
+    \beta_{Sk_{\beta}-1,V}\\
+    \beta_{Sk_{\beta},V}\\
+        \end{pmatrix}$
+
+- $B = \begin{pmatrix}
+    B_1 & 0 & \cdots & 0\\
+    0 & B_2 & \cdots & 0\\
+    \vdots & \ddots & &0\\
+    0 &   0     & \cdots& B_{Sk_{\beta}} 
+        \end{pmatrix}$: $VSk_{\beta} \times Sk_{\beta}k_{\gamma}$ matrix
+
+- $\Gamma = (\gamma_1' , \cdots, \gamma_{Sk_{\beta}}')'$: $Sk_{\beta}k_{\gamma} \times 1$ vector. 
+
+Then we can fit $\Gamma$ using linear regression model. 
+
+$$\hat{\Gamma} = ((XPB)'(XPB))^{-1}(XPB)'Y$$
+Fitted spatial $\beta$ will be expressed as below:
+
+\begin{align*}
+\hat{\beta_S} &= \begin{pmatrix}
+    \hat{\beta_1}\\
+    \hat{\beta_2}\\
+    \vdots \\
+    \hat{\beta_V}\\
+    \end{pmatrix} = PB\hat{\Gamma}
+\end{align*}
+
+

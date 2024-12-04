@@ -30,12 +30,6 @@ for (i in 1:25){
   hrfmat[i,] <- hrf_tmp
 }
 
-for (i in 26:35){
-  hrf_tmp <- as.numeric(strsplit(raw_hrf[i-10,], split = "\\s+")[[1]][-1])
-  hrfdf <- rbind(hrfdf, data.frame(index = rep(i,40), x = 0:39, y = hrf_tmp))
-  hrfmat[i,] <- hrf_tmp
-}
-
 hrfdf$index <- factor(hrfdf$index)
 
 # Plot the hrf
@@ -44,8 +38,8 @@ ggplot(hrfdf, aes(x, y, group = index, colour = index)) +
 
 # Onset
 b <- 1
-#R <- c(13, 14, 29, 44, 107, 125, 160, 171, 174, 190, 191, 206, 215, 232, 237, 262, 277, 292, 296, 346, 354, 367, 375, 382, 384, 398, 409, 462, 469, 475, 501, 520, 527, 566, 577, 629)
-R <- 100
+R <- c(13, 14, 29, 44, 107, 125, 160, 171, 174, 190, 191, 206, 215, 232, 237, 262, 277, 292, 296, 346, 354, 367, 375, 382, 384, 398, 409, 462, 469, 475, 501, 520, 527, 566, 577, 629)
+#R <- 100
 Run <- rep(0, 640)
 Run[R] <- 1
 Runc <- list(Run)
@@ -63,17 +57,14 @@ alpha = 0.001
 sim_list <- list()
 set.seed(906)
 
-for (h in 1:5){
+for (h in 1:1){
   true_sig <- b * conv(Run, hrfmat[h,])[1:640]
-  tc_noise <- noise_arp(n = 640, phi = c(0.3, 0))
-  tc <- true_sig + 0.5 * tc_noise
-  tc <- (tc - mean(tc)) / sd(tc)
   xsecs <- 0:40
-  
   tc_mat <- matrix(0,nrow = len, ncol = 100)
-  fitted_hrf_IL <- matrix(0, nrow = 40, ncol = 100)
-  params_IL <- matrix(0, nrow = 3, ncol = 100)
-  MSE_IL <- matrix(0, nrow = 2, ncol = 100)
+  
+  #fitted_hrf_IL <- matrix(0, nrow = 40, ncol = 100)
+  #params_IL <- matrix(0, nrow = 3, ncol = 100)
+  #MSE_IL <- matrix(0, nrow = 2, ncol = 100)
   fitted_hrf_sFIR <- matrix(0, nrow = 40, ncol = 100)
   params_sFIR <- matrix(0, nrow = 3, ncol = 100)
   MSE_sFIR <- matrix(0, nrow = 2, ncol = 100)
@@ -83,23 +74,22 @@ for (h in 1:5){
   fitted_hrf_spline <- matrix(0, nrow = 40, ncol = 100)
   params_spline <- matrix(0, nrow = 3, ncol = 100)
   MSE_spline <- matrix(0, nrow = 2, ncol = 100)
-  fitted_hrf_NL <- matrix(0, nrow = 40, ncol = 100)
-  params_NL <- matrix(0, nrow = 3, ncol = 100)
-  MSE_NL <- matrix(0, nrow = 2, ncol = 100)
+  #fitted_hrf_NL <- matrix(0, nrow = 40, ncol = 100)
+  #params_NL <- matrix(0, nrow = 3, ncol = 100)
+  #MSE_NL <- matrix(0, nrow = 2, ncol = 100)
   
-  for (i in 1:10){
+  for (i in 1:100){
     tc_noise <- noise_arp(n = 640, phi = c(0.3, 0))
-    tc <- true_sig + 0 * tc_noise
-    tc <- (tc - mean(tc)) / sd(tc)
-    xsecs <- 0:32
+    tc <- true_sig + 0.2 * tc_noise
+    #tc <- (tc - mean(tc)) / sd(tc)
     tc_mat[,i] <- tc
     
     #IL
-    Logit2_fitted <- Fit_Logit2(tc, TR, Runc, T, 0)
-    fitted_hrf_IL[,i] <- Logit2_fitted$hrf
-    params_IL[,i] <- Logit2_fitted$param
-    e1 <- Logit2_fitted$e
-    MSE_IL[,i] <- c((1 / (len - 1) * sum(e1^2)), ResidScan(e1, FWHM)$p)
+    #Logit2_fitted <- Fit_Logit2(tc, TR, Runc, T, 0)
+    #fitted_hrf_IL[,i] <- Logit2_fitted$hrf
+    #params_IL[,i] <- Logit2_fitted$param
+    #e1 <- Logit2_fitted$e
+    #MSE_IL[,i] <- c((1 / (len - 1) * sum(e1^2)), ResidScan(e1, FWHM)$p)
     
     #sFIR
     sFIR_fitted <- Fit_sFIR(tc, TR, Runc, T, 1)
@@ -123,55 +113,61 @@ for (h in 1:5){
     MSE_spline[,i] <- c((1 / (len - 1) * sum(e4^2)), ResidScan(e4, FWHM)$p)
     
     #non-linear gamma function
-    NLgamma_fitted <- Fit_NLgamma(tc, TR, Runc, T)
-    fitted_hrf_NL[,i] <- NLgamma_fitted$hrf[,1]
-    params_NL[,i] <- NLgamma_fitted$param[,1]
-    e5 = NLgamma_fitted$e
-    MSE_NL[,i] <- c((1 / (len - 1) * sum(e5^2)), ResidScan(e5, FWHM)$p)
+    #NLgamma_fitted <- Fit_NLgamma(tc, TR, Runc, T)
+    #fitted_hrf_NL[,i] <- NLgamma_fitted$hrf[,1]
+    #params_NL[,i] <- NLgamma_fitted$param[,1]
+    #e5 = NLgamma_fitted$e
+    #MSE_NL[,i] <- c((1 / (len - 1) * sum(e5^2)), ResidScan(e5, FWHM)$p)
     
     print(i)
   }
   
-  mat_list <- list(tc_mat = tc_mat, fitted_hrf_IL = fitted_hrf_IL, params_IL = params_IL,
-                   MSE_IL = MSE_IL, fitted_hrf_sFIR = fitted_hrf_sFIR, params_sFIR = params_sFIR,
+  #mat_list <- list(tc_mat = tc_mat, fitted_hrf_IL = fitted_hrf_IL, params_IL = params_IL,
+  #                 MSE_IL = MSE_IL, fitted_hrf_sFIR = fitted_hrf_sFIR, params_sFIR = params_sFIR,
+  #                 MSE_sFIR = MSE_sFIR, fitted_hrf_DD = fitted_hrf_DD, params_DD = params_DD,
+  #                 MSE_DD = MSE_DD, fitted_hrf_spline = fitted_hrf_spline, params_spline = params_spline,
+  #                 MSE_spline = MSE_spline, fitted_hrf_NL = fitted_hrf_NL, params_NL = params_NL,
+  #                 MSE_NL = MSE_NL)
+  mat_list <- list(tc_mat = tc_mat, fitted_hrf_sFIR = fitted_hrf_sFIR, params_sFIR = params_sFIR,
                    MSE_sFIR = MSE_sFIR, fitted_hrf_DD = fitted_hrf_DD, params_DD = params_DD,
                    MSE_DD = MSE_DD, fitted_hrf_spline = fitted_hrf_spline, params_spline = params_spline,
-                   MSE_spline = MSE_spline, fitted_hrf_NL = fitted_hrf_NL, params_NL = params_NL,
-                   MSE_NL = MSE_NL)
+                   MSE_spline = MSE_spline)
   sim_list[[h]] <- mat_list
 }
 
 # Visualization
 
 ## Visualize fitted hrf for each method & each hrf
-par(mfrow = c(5,5))
+#par(mfrow = c(5,5))
 
-h = 2
+h = 1
 
 p <- ggplot(data.frame(xsecs = xsecs[1:40], hrf = hrfmat[h,])) + 
   geom_line(aes(x=xsecs, y = hrf), color = "black", size = 1.5)
   
 mat_list <- sim_list[[h]]
   
-for (i in 1:10){
-  hrf_IL <- mat_list$fitted_hrf_IL[,i]  
+for (i in 1:100){
+  #hrf_IL <- mat_list$fitted_hrf_IL[,i]  
   hrf_sFIR <- mat_list$fitted_hrf_sFIR[,i]
   hrf_DD <- mat_list$fitted_hrf_DD[,i]
   hrf_Spline <- mat_list$fitted_hrf_spline[,i]
-  hrf_NL <- mat_list$fitted_hrf_NL[,i]
+  #hrf_NL <- mat_list$fitted_hrf_NL[,i]
     
-  p <- p + geom_line(data = data.frame(xsecs = xsecs[1:40], hrf = hrf_IL),
-                     aes(x = xsecs, y = hrf, colour = "IL"), alpha=0.2)
+  #p <- p + geom_line(data = data.frame(xsecs = xsecs[1:40], hrf = hrf_IL),
+  #                   aes(x = xsecs, y = hrf, colour = "IL"), alpha=0.2)
   p <- p + geom_line(data = data.frame(xsecs = xsecs[1:40], hrf = hrf_sFIR),
                      aes(x = xsecs, y = hrf, color = "sFIR"), alpha=0.2)
   p <- p + geom_line(data = data.frame(xsecs = xsecs[1:40], hrf = hrf_DD),
                      aes(x = xsecs, y = hrf, color = "DD"), alpha=0.2)
   p <- p + geom_line(data = data.frame(xsecs = xsecs[1:40], hrf = hrf_Spline),
                      aes(x = xsecs, y = hrf, color = "Spline"), alpha=0.2)
-  p <- p + geom_line(data = data.frame(xsecs = xsecs[1:40], hrf = hrf_NL),
-                     aes(x = xsecs, y = hrf, color = "NL"), alpha=0.2)
+  #p <- p + geom_line(data = data.frame(xsecs = xsecs[1:40], hrf = hrf_NL),
+  #                   aes(x = xsecs, y = hrf, color = "NL"), alpha=0.2)
 }
-p + scale_color_manual(name = "", values = c("IL" = "red", "sFIR" = "green", "DD" = "magenta", "Spline" = "blue", "NL" = "yellow"))
+#p + scale_color_manual(name = "", values = c("IL" = "red", "sFIR" = "green", "DD" = "magenta", "Spline" = "blue", "NL" = "yellow"))
+
+p + scale_color_manual(name = "", values = c("sFIR" = "green", "DD" = "magenta", "Spline" = "blue"))
 
 ## Visualize parameter estimates and bias 
 
