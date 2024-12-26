@@ -8,9 +8,8 @@ log_file_name="${workdir}/logs/${job_name}_qsub_log.txt"
 module load conda_R
 echo "Starting ${job_name}..."
 
-qsub \
+sbatch\
     -q "${node_name}" `# If you need a specific node` \
-    -l mem_free="${mem_gb_free}G",h_vmem="${mem_gb_free}G" `# Specify memory requirement` \
     -pe local $n_core `# Parallel environment for multi-threading` \
     -N $job_name `# Give a human-readable name to the submitted job so that you can find it later` \
     -o $log_file_name `# Direct output messages` \
