@@ -8,8 +8,7 @@ log_file_name="${workdir}/logs/${job_name}_qsub_log.txt"
 module load conda_R
 echo "Starting ${job_name}..."
 
-do
-  qsub \
+qsub \
     -q "${node_name}" `# If you need a specific node` \
     -l mem_free="${mem_gb_free}G",h_vmem="${mem_gb_free}G" `# Specify memory requirement` \
     -pe local $n_core `# Parallel environment for multi-threading` \
@@ -18,4 +17,3 @@ do
     -e $log_file_name `# Direct errors` \
     -m e -M jchoi177@jh.edu `# Send an email when the job completes or aborts` \
     -v Rscript "${workdir}/beta_infer_setting.R"
-done
