@@ -11,17 +11,19 @@ source("../Det_Logit.R")
 source("../tor_make_deconv_mtx3.R")
 
 # Load necessary libraries
-library(ggplot2)
-library(tidyverse)
-library(sp)
-library(gstat)
-library(raster)
-library(stats)
-library(mgcv)  # for thin plate regression spline
-library(akima)
-library(Matrix)
-library(reshape2)
-library(shiny)
+
+packages <- c( "mgcv", "stats",
+               "sp", "tidyverse", "ggplot2",
+	       "Matrix", "reshape2")
+
+# Install packages not yet installed
+installed_packages <- packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
+}
+
+# Packages loading
+invisible(lapply(packages, library, character.only = TRUE))
 
 # Simulation: DD + one beta
 
@@ -48,38 +50,25 @@ f_function_1 <- function(x, z, sigma_x, sigma_z) {
   sapply(term1 + term2, function(x) if(x>=3.78){1} else{0})
 }
 
+# Function to compute Gaussian kernel weight
+gaussian_weight <- function(dx, dy, bandwidth) {
+  exp(- (dx^2 + dy^2) / (2 * bandwidth^2))
+}
+
 beta10 <- f_function_1(x, z, sigma_x, sigma_z)
 
-beta1 <- array(0, dim = c(length(beta10),length(bw_vec_beta)))
+beta1 <- beta10
+
 bandwidth <- 0.08
 
 for (k in 1:length(beta10)){
   gx <- x[k]
   gy <- z[k]
   weights <- mapply(function(x, y) gaussian_weight(gx - x, gy - y, bandwidth), x, z)
-  weights_total[k,] <- weights
   beta1[k] <- sum(weights * beta10) / sum(weights)
 }
 
-# Draw contour plots
-# Contour plot of the true function
-contour(seq(0, 1, length.out = sqrt(n_points)), seq(0, 1, length.out = sqrt(n_points)), 
-        matrix(beta1, nrow = length(seq(0, 1, length.out = sqrt(n_points))), byrow = T),  
-        main = "True beta", ylab = "x2", levels = 0.35)
 
-df_fitted <- data.frame(x1 = x, x2 = z, beta1 = beta1)
-fld <- with(df_fitted, interp(x = x1, y = x2, z = beta1))
-filled.contour(x = fld$x,
-               y = fld$y,
-               z = fld$z,
-               color.palette =
-                 colorRampPalette(c("white", "blue")),
-               xlab = "X1",
-               ylab = "X2", 
-               main =  "True beta",
-               key.title = title(main = "beta1 ", cex.main = 1))
-
-# Simulation
 
 # Settings
 TR = 1
@@ -133,7 +122,7 @@ for (j in 1:length(error_sig)){
   for (k in 1:length(beta1)){
     true_sig <-  beta1[k] * conv(Run, CanonicalBasisSet(TR)$h)[1:len]
     xsecs <- 0:40
-    
+   
     for (i in 1:sim_k){
       tc_noise <- noise_arp(n = len, phi = c(0, 0), sigma = error_sig[j])
       tc <- true_sig + tc_noise
@@ -157,10 +146,6 @@ save(beta_DD, sig_hat, tc_mat, file = "beta_inf_sim.RData")
 # bandwidth <- diff(x)[1] / (2*sqrt(2*log(2))) #0.02682
 bw_vec <- seq(0.01, 0.1, length = 10)
 
-# Function to compute Gaussian kernel weight
-gaussian_weight <- function(dx, dy, bandwidth) {
-  exp(- (dx^2 + dy^2) / (2 * bandwidth^2))
-}
 
 # Calculate smoothed beta and Y values
 
